@@ -52,6 +52,7 @@ public:
    STDMETHOD(get_IPAddress)(BSTR* pVal);
    STDMETHOD(get_Username)(BSTR* pVal);
    STDMETHOD(get_HELO)(BSTR* pVal);
+   STDMETHOD(get_STARTTLS)(BSTR* pVal);
 
 private:
 

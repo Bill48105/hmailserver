@@ -67,3 +67,15 @@ STDMETHODIMP InterfaceClient::get_HELO(BSTR *pVal)
    }
 }
 
+STDMETHODIMP InterfaceClient::get_STARTTLS(BSTR *pVal)
+{
+   try
+   {
+      *pVal = m_pClientInfo->GetSTARTTLS().AllocSysString();
+      return S_OK;
+   }
+   catch (...)
+   {
+      return COMError::GenerateGenericMessage();
+   }
+}

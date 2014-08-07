@@ -22,7 +22,8 @@ namespace HM
    public:
       TCPConnection(bool useSSL,
                     boost::asio::io_service& io_service,    
-                    boost::asio::ssl::context& context);
+                    boost::asio::ssl::context& context,
+                    int stateSTARTTLS);
       ~TCPConnection(void);
 
       enum ShutdownOption
@@ -69,8 +70,15 @@ namespace HM
 
       int GetSessionID();
 
+      bool STARTTLS_Handshake(void);
+      bool GetAllowSTARTTLS();
+      bool GetSTARTTLSDone();
+
       bool ReportReadErrors(bool newValue);
    private:
+
+      // Added to test out IOCP crash fix
+      CriticalSection _criticalSection;
       
       void _StartAsyncConnect(tcp::resolver::iterator endpoint_iterator);
 
@@ -112,6 +120,10 @@ namespace HM
       bool _useSSL;
       long _remotePort;
       bool _hasTimeout;
+
+      int _stateSTARTTLS;
+      bool _handshakeDone;
+
       String _remoteServer;
       Event _connectionTermination;
 

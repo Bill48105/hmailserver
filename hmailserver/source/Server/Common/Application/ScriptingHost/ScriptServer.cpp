@@ -99,10 +99,16 @@ namespace HM
          m_bHasOnSMTPData = _DoesFunctionExist("OnSMTPData");
 
       }
-      catch (...)
-      {
-         ErrorManager::Instance()->ReportError(ErrorManager::High, 5017, "ScriptServer::LoadScripts", "An exception was thrown when loading scripts.");
-      }
+         catch ( std::exception& e)
+         {
+           string errorMessage = "An exception was thrown when loading scripts:";
+           errorMessage.append(e.what());
+           ErrorManager::Instance()->ReportError(ErrorManager::High, 5017, "ScriptServer::LoadScripts", errorMessage);
+         }
+//      catch (...)
+//      {
+//         ErrorManager::Instance()->ReportError(ErrorManager::High, 5017, "ScriptServer::LoadScripts", "An exception was thrown when loading scripts.");
+//      }
    }
 
 
@@ -195,58 +201,58 @@ namespace HM
       if (!Configuration::Instance()->GetUseScriptServer())
          return;
 
-	  // JDR: stores the name of the method that is fired in the script. http://www.hmailserver.com/forum/viewtopic.php?f=2&t=25497
-	  String m_sEventName = _T("Unknown");
+     // JDR: stores the name of the method that is fired in the script. http://www.hmailserver.com/forum/viewtopic.php?f=2&t=25497
+     String m_sEventName = _T("Unknown");
 
       switch (e)
       {
       case EventOnClientConnect:
-		 m_sEventName = _T("OnClientConnect");
+       m_sEventName = _T("OnClientConnect");
          if (!m_bHasOnClientConnect)
             return;
          break;
       case EventOnAcceptMessage:
-		 m_sEventName = _T("OnAcceptMessage");
+       m_sEventName = _T("OnAcceptMessage");
          if (!m_bHasOnAcceptMessage)
             return;
          break;
       case EventOnMessageDeliver:
-	     m_sEventName = _T("OnMessageDeliver");
+        m_sEventName = _T("OnMessageDeliver");
          if (!m_bHasOnDeliverMessage)
             return;
          break;
       case EventOnBackupCompleted:
-		  m_sEventName = _T("OnBackupCompleted");
+        m_sEventName = _T("OnBackupCompleted");
          if (!m_bHasOnBackupCompleted)
             return;
          break;
       case EventOnBackupFailed:
-		  m_sEventName = _T("OnBackupFailed");
+        m_sEventName = _T("OnBackupFailed");
          if (!m_bHasOnBackupFailed)
             return;
          break;
       case EventOnError:
-		  m_sEventName = _T("OnError");
+        m_sEventName = _T("OnError");
          if (!m_bHasOnError)
             return;
          break;
       case EventOnDeliveryStart:
-		  m_sEventName = _T("OnDeliveryStart");
+        m_sEventName = _T("OnDeliveryStart");
          if (!m_bHasOnDeliveryStart)
             return;
          break;
       case EventOnDeliveryFailed:
-		  m_sEventName = _T("OnDeliveryFailed");
+        m_sEventName = _T("OnDeliveryFailed");
          if (!m_bHasOnDeliveryFailed)
             return;
          break;
       case EventOnExternalAccountDownload:
-		  m_sEventName = _T("OnExternalAccountDownload");
+        m_sEventName = _T("OnExternalAccountDownload");
          if (!m_bHasOnExternalAccountDownload)
             return;
          break;
       case EventOnSMTPData:
-		  m_sEventName = _T("OnSMTPData");
+        m_sEventName = _T("OnSMTPData");
          if (!m_bHasOnSMTPData)
             return;
          break;
@@ -260,8 +266,8 @@ namespace HM
          
       }
 
-	  // JDR: Added event name to the debug log. http://www.hmailserver.com/forum/viewtopic.php?f=2&t=25497
-	  LOG_DEBUG("ScriptServer::FireEvent-" + m_sEventName);
+     // JDR: Added event name to the debug log. http://www.hmailserver.com/forum/viewtopic.php?f=2&t=25497
+     LOG_DEBUG("ScriptServer::FireEvent-" + m_sEventName);
 
       String sScript;
 

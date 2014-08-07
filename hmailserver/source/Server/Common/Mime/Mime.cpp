@@ -495,8 +495,13 @@ namespace HM
    String
       MimeHeader::GetUnicodeFieldValue(const AnsiString &pszFieldName, const AnsiString &sRawFieldValue)
    {
+      AnsiString sWideStr;
+      sWideStr = "";
       if (sRawFieldValue.IsEmpty())
-         return sRawFieldValue;
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeHeader::GetUnicodeFieldValue - sRawFieldValue.IsEmpty");
+         return sWideStr;
+      }
 
 
       // De-code the value to plain text.
@@ -509,9 +514,37 @@ namespace HM
 
       delete pCoder;
 
-      String sWideStr = Charset::ToWideChar(sRetVal, sCharset);
+      sWideStr = Charset::ToWideChar(sRetVal, sCharset);
 
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeHeader::GetUnicodeFieldValue - sWideStr: " + sWideStr);
       return sWideStr;
+   }
+
+   AnsiString
+      MimeHeader::GetUTF8FieldValue(const AnsiString &pszFieldName) const
+   {
+      AnsiString sRawFieldValue = GetRawFieldValue(pszFieldName);
+      return GetUTF8FieldValue(pszFieldName, sRawFieldValue);
+   }
+
+   AnsiString
+      MimeHeader::GetUTF8FieldValue(const AnsiString &pszFieldName, const AnsiString &sRawFieldValue)
+   {
+      AnsiString sAnsiStr;
+      if (sRawFieldValue.IsEmpty())
+         return sAnsiStr;
+
+
+      // De-code the value to plain text.
+      AnsiString sRetVal;
+      FieldCodeBase* pCoder = MimeEnvironment::CreateFieldCoder(pszFieldName);
+      pCoder->SetInput(sRawFieldValue, sRawFieldValue.GetLength(), false);
+      pCoder->GetOutput(sRetVal);
+
+      delete pCoder;
+
+      sAnsiStr = Charset::ToUTF8(sRetVal);
+      return sAnsiStr;
    }
 
    void 
@@ -884,14 +917,25 @@ namespace HM
    String
       MimeBody::GetUnicodeText()
    {
+      String sWideStr;
       AnsiString sRawText = GetRawText();
 
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText sRawText: " + sRawText)
+else
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText sRawText");
+
       if (sRawText.IsEmpty())
-         return "";
+      {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText sRawText.IsEmpty!");
+         return sRawText;
+       }
 
       std::string strCharset = GetCharset();
       if (strCharset.size() == 0)
+      {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText strCharset.size=0!");
          return sRawText;
+      }
 
       // De-code the value to plain text.
       AnsiString sRetVal;
@@ -900,7 +944,10 @@ namespace HM
       pCoder->GetOutput(sRetVal);
       delete pCoder;
 
-      String sWideStr = Charset::ToWideChar(sRetVal, strCharset);
+      sWideStr = Charset::ToWideChar(sRetVal, strCharset);
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText sWideStr: " + sWideStr)
+else
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::GetUnicodeText sWideStr");
 
       return sWideStr;
    }
@@ -1120,12 +1167,19 @@ namespace HM
    {
       File oFile;
       if (!oFile.Open(pszFilename, File::OTReadOnly))
+      {
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::ReadFromFile - Error opening file RO");
          return false;
+      }   
+      
 
       shared_ptr<ByteBuffer> pUnencodedBuffer = oFile.ReadFile();
 
       if (!pUnencodedBuffer)
+      {
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::ReadFromFile - pUnencodedBuffer empty");
          return false;
+      }
 
       // Encode the file, to base64 or likewise.
       MimeCodeBase* pCoder = MimeEnvironment::CreateCoder(GetTransferEncoding());
@@ -1146,6 +1200,7 @@ namespace HM
       // Create an content-disposition header as well.
       SetRawFieldValue(CMimeConst::ContentDisposition(), CMimeConst::Inline(), "");
       SetParameter(CMimeConst::ContentDisposition(), CMimeConst::Filename(), sEncodedValue);
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MimeBody::ReadFromFile - Attachment encoded successfully");
 
       return true;
    }
@@ -1337,11 +1392,15 @@ namespace HM
          return;					// boundary not be set
 
       int nBoundSize = (int)strBoundary.size() + 6;
+
+// Bill48105 - These iOutputSize are temp fix for [ ambiguous error
+	  int iOutputSizeLess2 = output.size() - 2;
+	  int iOutputSizeLess1 = output.size() - 1;
       for (BodyList::const_iterator it=m_listBodies.begin(); it!=m_listBodies.end(); it++)
       {
          // If the initial body ends with \r\n, remove them. We add new ones below.
          if (m_listBodies.begin() == it && output.size() >= 2 && 
-            output[output.size()-2] == '\r' && output[output.size()-1] == '\n')
+            output[iOutputSizeLess2] == '\r' && output[iOutputSizeLess1] == '\n')
          {
             output = output.Mid(0, output.GetLength() - 2);
          }

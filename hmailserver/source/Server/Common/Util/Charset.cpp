@@ -189,6 +189,25 @@ namespace HM
       return sRetVal;
    }
 
+   AnsiString 
+   Charset::ToUTF8(const String &sWideCharString )
+   {
+      int nNeedSize = WideCharToMultiByte( CP_UTF8, 0, sWideCharString, sWideCharString.GetLength(), NULL, 0, NULL, NULL );
+      
+      char *pOutput = new char[nNeedSize + 1];
+      memset(pOutput, 0, nNeedSize + 1);
+
+      if( WideCharToMultiByte( CP_UTF8, 0, sWideCharString, sWideCharString.GetLength(), pOutput, nNeedSize+1, NULL, NULL ) == 0 )
+      {
+         ASSERT(0);
+      }
+      
+      AnsiString sRetVal = pOutput;
+      delete [] pOutput;
+
+      return sRetVal;
+   }
+
    String 
    Charset::ToWideChar(const AnsiString &sMultiByte, const AnsiString &sCharacterSet)
    {
@@ -197,11 +216,12 @@ namespace HM
 
       int iToCodePage = CodePages::Instance()->GetCodePage(sCharacterSet);
 
-      int iNeedSize = MultiByteToWideChar(iToCodePage, 0, sMultiByte.c_str(), -1, NULL, NULL);
+      int iNeedSize = MultiByteToWideChar(iToCodePage, 0, sMultiByte.c_str(), -1, NULL, 0);
 
       wchar_t *pOutput = new wchar_t[iNeedSize + 1];
       int i = MultiByteToWideChar(iToCodePage, 0, sMultiByte.c_str(), -1, pOutput, iNeedSize + 1);
-      String sWideStr = pOutput;
+
+      String sWideStr = wstring(pOutput);
       delete [] pOutput;
 
       return sWideStr;

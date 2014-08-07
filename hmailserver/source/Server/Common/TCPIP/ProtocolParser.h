@@ -48,6 +48,10 @@ namespace HM
 
       int GetSessionID() const;
 
+      bool StartTLS();
+      bool GetAllowSTARTTLS();
+      bool GetSTARTTLSDone();
+
    protected:
 
       void PostDisconnect();

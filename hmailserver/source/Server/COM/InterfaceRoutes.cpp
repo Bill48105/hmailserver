@@ -51,6 +51,9 @@ STDMETHODIMP InterfaceRoutes::get_Item(long Index, IInterfaceRoute **pVal)
    
       shared_ptr<HM::Route> pRoute = m_pRoutes->GetItem(Index);
    
+      if (!pRoute)
+         return S_FALSE;
+   
       if (pRoute)
       {
          pInterfaceRoute->AttachItem(pRoute);
@@ -131,7 +134,7 @@ InterfaceRoutes::get_ItemByName(BSTR ItemName, IInterfaceRoute **pVal)
    
       shared_ptr<HM::Route> pRoute = m_pRoutes->GetItemByName(ItemName);
       if (!pRoute)
-         return DISP_E_BADINDEX;
+         return S_FALSE;
    
       pRouteInterface->AttachItem(pRoute);
       pRouteInterface->AttachParent(m_pRoutes, true);
@@ -160,7 +163,7 @@ InterfaceRoutes::get_ItemByDBID(long lDBID, IInterfaceRoute **pVal)
    
       shared_ptr<HM::Route> pRoute = m_pRoutes->GetItemByDBID(lDBID);
       if (!pRoute)
-         return DISP_E_BADINDEX;
+         return S_FALSE;
    
       pRouteInterface->AttachItem(pRoute);
       pRouteInterface->AttachParent(m_pRoutes, true);

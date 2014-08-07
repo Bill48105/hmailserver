@@ -26,6 +26,7 @@ namespace HM
       static String GetIMAPEncoded(const String &sUnencoded);
 
       static AnsiString ToMultiByte(const String &sWideChar, const AnsiString &sCharacterSet);
+      static AnsiString ToUTF8(const String &sWideChar );
       static String ToWideChar(const AnsiString &sMultiByte, const AnsiString &sCharacterSet);
 
    private:

@@ -105,12 +105,12 @@ namespace HM
          // but could cause problems for people who've been relying on them not being
          // case sensitive. Perhaps this needs to be optional before implementing.
          // 
-         // if (sPassword.Compare(sComparePassword) != 0)
-         //   return false;
+         if (sPassword.Compare(sComparePassword) != 0)
+           return false;
          //
-         sComparePassword.MakeLower();
-         if (sPassword.CompareNoCase(sComparePassword) != 0)
-            return false;
+         // sComparePassword.MakeLower();
+         // if (sPassword.CompareNoCase(sComparePassword) != 0)
+         //   return false;
       }
       else if (iPasswordEncryption == Crypt::ETMD5 ||
                iPasswordEncryption == Crypt::ETSHA256)

@@ -44,13 +44,32 @@ namespace HM
       if (SPFStringToAddr(T2A(sSenderIP),family,BinaryIP)==NULL)
          return Neutral;
 
+      String sSPFBestGuess = IniFileSettings::Instance()->GetSPFDefaultPolicy();
+      String sSPFBestGuessA = IniFileSettings::Instance()->GetSPFDefaultPolicyA();
+
+      int result1 = SPFSetBestGuess(T2A(sSPFBestGuess), T2A(sSPFBestGuessA)); // policy, policy if only A
+
+      if (result1 != 0)
+      {
+          LOG_DEBUG("SPFDefaultPolicy NOT Set OK. Invalid SPF string specified?");
+      }
+      else
+      {
+          LOG_DEBUG("Set OK. SPFDefaultPolicy: " + sSPFBestGuess + " SPFDefaultPolicyA: " + sSPFBestGuessA);
+      }
+          
+      
+      String sPolicyOverride = IniFileSettings::Instance()->GetSPFPolicyOverride();
+      LOG_DEBUG("SPFPolicyOverride Set: " + sPolicyOverride);
+
       const char* explain;
-      int result=SPFQuery(family,BinaryIP,T2A(sSenderEmail),NULL,NULL,NULL,&explain);
+      int result=SPFQuery(family,BinaryIP,T2A(sSenderEmail),T2A(sPolicyOverride),NULL,NULL,&explain); // ipv4/6, binIP, sender, policy over-ride, HELO, explaination
 
       if (explain != NULL)
       {
          sExplanation = explain;
          SPFFree(explain);
+         LOG_DEBUG("SPF Explaination: " + sExplanation);
       }
 
       if (result == SPF_Fail)

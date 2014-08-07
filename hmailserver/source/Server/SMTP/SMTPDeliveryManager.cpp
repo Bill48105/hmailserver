@@ -113,7 +113,18 @@ namespace HM
          DWORD dwWaitResult = WaitForMultipleObjects(iSize, handles, FALSE, INFINITE);
 
          int iEvent = dwWaitResult - WAIT_OBJECT_0;
-      
+
+         // Temp test to see if cause of IOCP errors
+
+         if (iEvent < 0)
+         {
+
+            ErrorManager::Instance()->ReportError(ErrorManager::Critical, 9999, "SMTPDeliveryManager::DoWork", "WARNING iEvent less than 0!");
+            m_evtDeliverMessage.Reset();
+            return;
+         }
+         else
+         {
          switch (iEvent)
          {
          case 0:
@@ -126,7 +137,7 @@ namespace HM
             m_evtDeliverMessage.Reset();
             break;
          }
-
+}
       }
 
       _SendStatistics(true);

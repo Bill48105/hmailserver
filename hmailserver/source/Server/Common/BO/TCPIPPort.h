@@ -31,6 +31,8 @@ namespace HM
 
       bool GetUseSSL() const  {return m_bUseSSL; }
       void SetUseSSL(bool bNewVal) {m_bUseSSL = bNewVal;}
+      bool GetUseSTARTTLS() const { return m_bUseSTARTTLS;} //JDR: added to allow setting startTLS in the DB.
+      void SetUseSTARTTLS(bool bNewVal) {m_bUseSTARTTLS = bNewVal;}
 
       bool XMLStore(XNode *pNode, int iOptions);
       bool XMLLoad(XNode *pNode, int iOptions);
@@ -44,7 +46,7 @@ namespace HM
       SessionType m_iPortProtocol;
       int m_iPortNumber;
       bool m_bUseSSL;
-
+      bool m_bUseSTARTTLS;      //JDR: added to allow setting startTLS in the DB.
       int m_iSSLCertificateID;
 
       IPAddress _address;

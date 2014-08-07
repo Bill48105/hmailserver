@@ -68,19 +68,29 @@ namespace HM
    bool
    Attachments::Add(const String &sFilename)
    {
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Attachments::Add - Filename: " + sFilename);
+
       if (!FileUtilities::Exists(sFilename))      
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Attachments::Add - File does not exist");
          return false;
+      }
 
       // Load the attachment
       shared_ptr<MimeBody> pAttachment = m_pMsgData->CreatePart("application/octet-stream");
       pAttachment->SetTransferEncoding("base64");
 
       if (!pAttachment->ReadFromFile(sFilename))
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Attachments::Add - ReadFromFile Error");
          return false;
+      }
 
       // Add the attachment to the collection.
       shared_ptr<Attachment> pItem = shared_ptr<Attachment>(new Attachment(m_pMimeBody, pAttachment));
       vecObjects.push_back(pItem);
+
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Attachments::Add - File attached successfully");
 
       return true;
    }

@@ -36,33 +36,14 @@ namespace HM
       if (pRecipientAccount->GetForwardAddress().IsEmpty())
       {
          // Configuration error. Forward was enabled, but no address specified.
+         LOG_DEBUG(_T("SMTPDeliverer::_ApplyForwarding - Forward was enabled, but no address specified."));
          return true;
       }
 
-      if (!pRecipientAccount->GetForwardAddress().CompareNoCase(pRecipientAccount->GetAddress()))
-      {
-         ErrorManager::Instance()->ReportError(ErrorManager::Medium, 4334, "SMTPDeliverer::_ApplyForwarding", "Could not forward message since target address as same as account address.");
-         return true;
-      }
 
       String sErrorMessage;
       bool bTreatSecurityAsLocal = false;
       RecipientParser recipientParser;
-      if (recipientParser.CheckDeliveryPossibility(false, 
-                                                    pRecipientAccount->GetAddress(), 
-                                                    pRecipientAccount->GetForwardAddress(), 
-                                                    sErrorMessage, 
-                                                    bTreatSecurityAsLocal, 
-                                                    0) != RecipientParser::DP_Possible)
-      {
-         String sLogMessage = Formatter::Format("Could not forward message from {0} to {1}. Reason: {2}",
-                        pRecipientAccount->GetAddress(), pRecipientAccount->GetForwardAddress(), sErrorMessage);
-
-         ErrorManager::Instance()->ReportError(ErrorManager::Medium, 4382, "SMTPDeliverer::_ApplyForwarding", sLogMessage);
-
-         return true;
-      }
-
 
       String originalFileName = PersistentMessage::GetFileName(pRecipientAccount, pOriginalMessage);
 
@@ -92,9 +73,37 @@ namespace HM
       pNewMsgData->IncreaseRuleLoopCount();
       pNewMsgData->Write(newFileName);
 
+
       // Add new recipients
       bool recipientOK = false;
-      recipientParser.CreateMessageRecipientList(pRecipientAccount->GetForwardAddress(), pNewMessage->GetRecipients(), recipientOK);
+      AnsiString sRecipientAcct = pRecipientAccount->GetAddress();
+
+      AnsiString sForwardAddress = pRecipientAccount->GetForwardAddress();
+
+      // Look for multi address separated by commas
+      vector<AnsiString> vforwardaddresses = StringParser::SplitString(sForwardAddress,",");
+      boost_foreach(AnsiString oneforwardaddress, vforwardaddresses)
+      {
+
+         LOG_DEBUG(_T("SMTPDeliverer::_ApplyForwarding - Multiforward address found: " + oneforwardaddress));
+
+         if (_stricmp(oneforwardaddress, sRecipientAcct) != 0)
+         {
+
+            // returned value doesn't appear to be used but resetting to false anyway just in case
+            bTreatSecurityAsLocal = false;
+
+            recipientOK = false;
+            recipientParser.CreateMessageRecipientList(oneforwardaddress, pNewMessage->GetRecipients(), recipientOK);
+
+             if (recipientOK) LOG_DEBUG(_T("SMTPDeliverer::_ApplyForwarding - recipientOK")) else LOG_DEBUG(_T("SMTPDeliverer::_ApplyForwarding - recipient!OK"));
+
+         }
+         else
+         {
+            ErrorManager::Instance()->ReportError(ErrorManager::Medium, 4334, "SMTPDeliverer::_ApplyForwarding", "Could not forward message to recipient since target address same as account address.");
+         }
+      }
 
       // Check that there are recipients of the letter. If not, we should skip delivery.
       if (pNewMessage->GetRecipients()->GetCount() == 0)

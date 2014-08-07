@@ -822,8 +822,21 @@ namespace HM
 
       String sBodyParams;
 
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("IMAPFetch::_GetPartStructure - RawFilename: " + oPart->GetRawFilename()));
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("IMAPFetch::_GetPartStructure - EncodedFilename: " + Charset::GetIMAPEncoded(oPart->GetRawFilename())));
+
+      String sRawFilename;
+      sRawFilename = oPart->GetRawFilename();
+
+      sRawFilename.Replace(_T("\\\""), _T("\""));
+      sRawFilename.Replace(_T("\\\\"), _T("\\"));
+
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("IMAPFetch::_GetPartStructure - EscapedFilename: " + sRawFilename));
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("IMAPFetch::_GetPartStructure - Escaped+EncodedFilename: " + Charset::GetIMAPEncoded(sRawFilename)));
+
+
       if (oPart->IsAttachment())
-         sBodyParams.Format(_T("(\"NAME\" \"%s\")"), oPart->GetRawFilename());
+         sBodyParams.Format(_T("(\"NAME\" \"%s\")"), Charset::GetIMAPEncoded(oPart->GetRawFilename()));
       else
       {
 			String sCharset = oPart->GetCharset();
@@ -953,7 +966,7 @@ namespace HM
             sDisposition = "ATTACHMENT";
     
          String sTemp;
-         sTemp.Format(_T("NIL (\"%s\" (\"FILENAME\" \"%s\"))"), sDisposition, oPart->GetRawFilename());
+         sTemp.Format(_T("NIL (\"%s\" (\"FILENAME\" \"%s\"))"), sDisposition, Charset::GetIMAPEncoded(oPart->GetRawFilename()));
          sResult += " " + sTemp;
       }
 

@@ -258,9 +258,15 @@ namespace HM
    {
       String sRetVal;
       if (m_bEncodeFields)
+      {
          sRetVal = m_pMimeMail->GetUnicodeFieldValue(sName);
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::GetFieldValue - GetUnicodeFieldValue sName: " + sName);
+      }
       else
+      {
          sRetVal = m_pMimeMail->GetRawFieldValue(sName);
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::GetFieldValue - GetRawFieldValue sName: " + sName);
+      }
 
       return sRetVal;
    }
@@ -293,13 +299,22 @@ namespace HM
       if (pPart)
       {
          if (m_bEncodeFields)
+         {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::GetBody m_bEncodeFields GetUnicodeText() ");
             return pPart->GetUnicodeText();
+         }
          else
+         {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::GetBody !m_bEncodeFields GetRawText() ");
             return pPart->GetRawText();
+         }
       }
       else
+      {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::GetBody text/plain not found! ");
+
          return "";
-    
+      }    
    }
 
    void
@@ -622,6 +637,8 @@ namespace HM
    {
       String sPartType = m_pMimeMail->GetCleanContentType();
 
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::FindPart 1-sPartType: " + sPartType);
+
       if (sPartType.CompareNoCase(sType) == 0)
          return m_pMimeMail;
 
@@ -637,6 +654,8 @@ namespace HM
       {
          String sContentType = pPart->GetCleanContentType();
 
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::FindPart 2-sContentType: " + sContentType);
+
          if (sContentType.CompareNoCase(sType) == 0)
             return pPart;
          
@@ -647,6 +666,8 @@ namespace HM
             while (pSubPart)
             {
                String sSubContentType = pSubPart->GetCleanContentType();
+
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("MessageData::FindPart 3-sSubContentType: " + sSubContentType);
                
                if (sSubContentType.CompareNoCase(sType) == 0)
                   return pSubPart;

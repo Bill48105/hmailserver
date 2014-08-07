@@ -820,7 +820,7 @@ namespace HM
    {
       // Logs are crazy huge for clients that do a lot of TOP's so
       // let's not log every email line unless loglevel is high enough
-      if (IniFileSettings::Instance()->GetLogLevel() >= 8)
+      if (IniFileSettings::Instance()->GetLogLevel() > 8)
       {
          String sLogData = "SENT: " + sData;
          sLogData.TrimRight(_T("\r\n"));

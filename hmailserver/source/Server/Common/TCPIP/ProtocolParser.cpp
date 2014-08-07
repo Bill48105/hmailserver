@@ -153,4 +153,24 @@ namespace HM
    {
       return _parentConnection->GetSharedFromThis();
    }
+
+    bool
+    ProtocolParser::StartTLS()
+    {
+       return (_parentConnection->STARTTLS_Handshake() == 1) ? true : false ;
+    }
+
+   bool 
+   ProtocolParser::GetAllowSTARTTLS()
+   {
+      return _parentConnection->GetAllowSTARTTLS();
+   }
+
+   bool 
+   ProtocolParser::GetSTARTTLSDone()
+   {
+      return _parentConnection->GetSTARTTLSDone();
+   }
+
+
 }

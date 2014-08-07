@@ -11,6 +11,7 @@
 #include "../BO/SSLCertificates.h"
 #include "../BO/SSLCertificate.h"
 
+
 using boost::asio::ip::tcp;
 
 namespace HM
@@ -20,7 +21,7 @@ namespace HM
    class TCPServer
    {
    public:
-      TCPServer(boost::asio::io_service& io_service, const IPAddress &ipaddress, int port, SessionType sessionType, shared_ptr<SSLCertificate> certificate);
+      TCPServer(boost::asio::io_service& io_service, const IPAddress &ipaddress, int port, SessionType sessionType, shared_ptr<SSLCertificate> certificate,bool UseSTARTTLS);
       ~TCPServer(void);
 
       void Run();
@@ -47,5 +48,6 @@ namespace HM
 
       IPAddress _ipaddress;
       int _port;
+      bool _bUseSTARTTLS;
    };
 }

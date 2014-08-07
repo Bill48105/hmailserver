@@ -16,7 +16,8 @@ namespace HM
       m_bUseSSL(false),
       m_iPortNumber(0),
       m_iPortProtocol(STUnknown),
-      m_iSSLCertificateID(0)
+      m_iSSLCertificateID(0),
+      m_bUseSTARTTLS(false)
    {
 
    }
@@ -42,7 +43,17 @@ namespace HM
       pNode->AppendAttr(_T("Name"), GetName());
       pNode->AppendAttr(_T("PortProtocol"), StringParser::IntToString(m_iPortProtocol));
       pNode->AppendAttr(_T("PortNumber"), StringParser::IntToString(m_iPortNumber));
-      pNode->AppendAttr(_T("UseSSL"), m_bUseSSL ? _T("1") : _T("0"));
+
+      //JDR: added the following code to set if we are using a StartTLS connection.
+      if (m_bUseSSL == true){
+         pNode->AppendAttr(_T("UseSSL"), _T("1"));
+      } else if (m_bUseSTARTTLS == true){
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Set UseSTARTLS");
+        pNode->AppendAttr(_T("UseSSL"), _T("2"));
+      } else {
+         pNode->AppendAttr(_T("UseSSL"), _T("0"));
+      }
+
       pNode->AppendAttr(_T("Address"), String(_address.ToString()));
       
       if (m_iSSLCertificateID > 0)
@@ -59,6 +70,9 @@ namespace HM
       m_iPortProtocol = (SessionType) _ttoi(pNode->GetAttrValue(_T("PortProtocol")));
       m_iPortNumber = _ttoi(pNode->GetAttrValue(_T("PortNumber")));
       m_bUseSSL = pNode->GetAttrValue(_T("UseSSL")) == _T("1");
+
+      // set to use STARTTLS
+      m_bUseSTARTTLS = pNode->GetAttrValue(_T("UseSSL")) == _T("2");
       _address.TryParse(pNode->GetAttrValue(_T("Address")));
       m_iSSLCertificateID  = _GetSSLCertificateID(pNode->GetAttrValue(_T("SSLCertificateName")));
 

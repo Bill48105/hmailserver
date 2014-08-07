@@ -168,6 +168,17 @@ namespace HM
       m_iSMTPDMaxSizeDrop =  _ReadIniSettingInteger("Settings", "SMTPDMaxSizeDrop",0);
       m_bBackupMessagesDBOnly =  _ReadIniSettingInteger("Settings", "BackupMessagesDBOnly",0) == 1;
       m_bAddXAuthUserIP =  _ReadIniSettingInteger("Settings", "AddXAuthUserIP",1) == 1;
+      m_sValidEmailPattern = _ReadIniSettingString("Settings", "ValidEmailPattern", "");
+      m_sAutoReplyReturnPath = _ReadIniSettingString("Settings", "AutoReplyReturnPath", "");
+      m_sSPFDefaultPolicy = _ReadIniSettingString("Settings", "SPFDefaultPolicy", "");
+      m_sSPFDefaultPolicyA = _ReadIniSettingString("Settings", "SPFDefaultPolicyA", "");
+      m_sSPFPolicyOverride = _ReadIniSettingString("Settings", "SPFPolicyOverride", "");
+      m_sDnsServers = _ReadIniSettingString("Settings", "DnsServers", "");
+
+      m_sSSLOptionList = _ReadIniSettingString("Settings", "SSLOptionList", "default_workarounds,no_sslv2");
+      m_sSSLCipherList = _ReadIniSettingString("Settings", "SSLCipherList", "");
+      m_sDisableAUTHList = _ReadIniSettingString("Settings", "DisableAUTHList", "");
+
 
       //Probably need some more sanity checks on these settings but for now we assume user has some sense
 

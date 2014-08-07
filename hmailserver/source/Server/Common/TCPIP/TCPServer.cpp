@@ -27,7 +27,7 @@ using boost::asio::ip::tcp;
 
 namespace HM
 {
-   TCPServer::TCPServer(boost::asio::io_service& io_service, const IPAddress &ipaddress, int port, SessionType sessionType, shared_ptr<SSLCertificate> certificate) :
+   TCPServer::TCPServer(boost::asio::io_service& io_service, const IPAddress &ipaddress, int port, SessionType sessionType, shared_ptr<SSLCertificate> certificate, bool UseSTARTTLS) :
       _acceptor(io_service),
       _context(io_service, boost::asio::ssl::context::sslv23),
       _ipaddress(ipaddress),
@@ -35,6 +35,7 @@ namespace HM
    {
       _sessionType = sessionType;
       _certificate = certificate;
+      _bUseSTARTTLS = UseSTARTTLS;
    }
 
    TCPServer::~TCPServer(void)
@@ -109,8 +110,77 @@ namespace HM
    {
       try
       {
-         _context.set_options(boost::asio::ssl::context::default_workarounds |
-                              boost::asio::ssl::context::no_sslv2);
+
+
+         AnsiString sSSLCipherList;
+         sSSLCipherList = IniFileSettings::Instance()->GetSSLCipherList();
+
+         AnsiString sSSLOptionList;
+         sSSLOptionList = IniFileSettings::Instance()->GetSSLOptionList();
+
+
+         if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSLOptionList Option: " + sSSLOptionList));
+
+         if (sSSLCipherList != "") {
+            if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSL Cipher Option: " + sSSLCipherList));
+            SSL_CTX_set_cipher_list(_context.native_handle(), sSSLCipherList);
+         } else if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSLCipherList Option not set, skipping."));
+
+            vector<AnsiString> vSSLOptions = StringParser::SplitString(sSSLOptionList,",");
+            boost_foreach(AnsiString oneSSLOption, vSSLOptions)
+            {
+               if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - Found SSL Option: " + oneSSLOption));
+
+
+               if (oneSSLOption=="default_workarounds")
+               {
+                  _context.set_options(boost::asio::ssl::context::default_workarounds);
+                  if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSL Option SET: " + oneSSLOption));
+               }
+               else if (oneSSLOption=="no_sslv2")
+               {
+                  _context.set_options(boost::asio::ssl::context::no_sslv2);
+                  if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSL Option SET: " + oneSSLOption));
+               }
+               else if (oneSSLOption=="no_sslv3")
+               {
+                  _context.set_options(boost::asio::ssl::context::no_sslv3);
+                  if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSL Option SET: " + oneSSLOption));
+               }
+               else if (oneSSLOption=="no_tlsv1")
+               {
+                  _context.set_options(boost::asio::ssl::context::no_tlsv1);
+                  if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPServer::InitSSL() - SSL Option SET: " + oneSSLOption));
+               }
+
+               // These are disabled as they do not exist in BOOST
+               //else if (oneSSLOption=="ssl_op_no_compression")
+               //{
+                  //ctx.set_options(boost::asio::ssl::context::ssl_op_no_compression);;
+                  //if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+                  //}
+               //else if (oneSSLOption=="ssl_op_all")
+               //{
+                  //ctx.set_options(boost::asio::ssl::context::ssl_op_all);;
+                  //if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+               //}
+               //else if (oneSSLOption=="ssl_op_cipher_server_preference")
+               //{
+                  //ctx.set_options(boost::asio::ssl::context::ssl_op_cipher_server_preference);;
+                  //if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+               //}
+               //else if (oneSSLOption=="ssl_op_no_session_resumption_on_renegotiation")
+               //{
+                  //ctx.set_options(boost::asio::ssl::context::ssl_op_no_session_resumption_on_renegotiation);;
+                  //if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+               //}
+
+               // Fall back to unknown
+               else
+               {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 3) LOG_DEBUG(_T("TCPServer::InitSSL() - SKIPPING UNKNOWN SSL Option: " + oneSSLOption));
+               }
+            }
       }
       catch (boost::system::system_error ec)
       {
@@ -220,8 +290,20 @@ namespace HM
       if (_acceptor.is_open())
       {
          bool useSSL = _certificate != 0;
-         
-         shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(useSSL, _acceptor.get_io_service(), _context));
+         int stateSTARTTLS;
+
+       // JDR: set to use STARTTLS, NOTE: above we check for a certificate so useSSL will be set that way, in the future it may be 
+       // relevant to pass in something else for useSSL so the methods in TCPConnection and all protocol parsers can properly implement their 
+       // own versions of STARTTLS.
+         if ((useSSL) && (_bUseSTARTTLS)) {
+            stateSTARTTLS=1;
+         }
+         else
+         {
+            stateSTARTTLS=0;
+         }         
+                  
+         shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(useSSL, _acceptor.get_io_service(), _context, stateSTARTTLS));
 
          _acceptor.async_accept(pNewConnection->GetSocket(),
             boost::bind(&TCPServer::HandleAccept, this, pNewConnection,

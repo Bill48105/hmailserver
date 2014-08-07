@@ -54,6 +54,8 @@ namespace HM
       bool bDomainIsLocal = false;
       bTreatSecurityAsLocal = false;
 
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility START: " + sOriginalRecipient));
+
       // Apply domain name aliases to the sender address. Can be done
       // outside the loop since this won't be recursed.
       shared_ptr<DomainAliases> pDA = ObjectCache::Instance()->GetDomainAliases();
@@ -85,8 +87,10 @@ namespace HM
          // If this is a local domain, we should check for accounts, aliases and distribution lists.
          if (bDomainIsLocal)
          {
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility islocal"));
             if (iRecursionLevel == 1)
             {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility recurse 1"));
                // Why only if iRecurse == 1?
                // Because:
                // If you have set up an alias pointing from user@local.com, user@external.com
@@ -104,8 +108,11 @@ namespace HM
             shared_ptr<const Account> pAccount = CacheContainer::Instance()->GetAccount(primaryAddress);
             if (pAccount)
             {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility is account"));
+
                if (pAccount->GetActive())
                {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility is active user"));
                   bDomainIsLocal = true;
                   return DP_Possible;
                }
@@ -120,10 +127,62 @@ namespace HM
             shared_ptr<const Alias> pAlias = CacheContainer::Instance()->GetAlias(primaryAddress);
             if (pAlias)
             {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility is alias"));
                if (pAlias->GetIsActive())
                {
-                  recipientAddress = pAlias->GetValue();
-                  continue;
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility is active alias"));
+
+                  AnsiString sAliasList= pAlias->GetValue();
+
+                  // Look for multi address separated by commas
+                  vector<AnsiString> vAliasListAdresses = StringParser::SplitString(sAliasList,",");
+
+
+                  if (vAliasListAdresses.size() > 1)
+                  {
+                     if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility Size > 1"));
+
+                     boost_foreach(AnsiString onealiasaddress, vAliasListAdresses)
+                     {
+
+                        if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility one: " + onealiasaddress));
+
+                        bTreatSecurityAsLocal = false;
+
+                        DeliveryPossibility dp = CheckDeliveryPossibility(bSenderIsAuthed, sSender, onealiasaddress, sErrMsg, bTreatSecurityAsLocal, iRecursionLevel);
+
+                        if (dp == DP_PermissionDenied)
+                        {
+                           Logger::Instance()->LogDebug("RecipientParser::CheckDeliveryPossibility::CheckAlias::PermissionDENIED");
+
+                           return DP_PermissionDenied;
+                        }
+
+                        if (dp == DP_RecipientUnknown)
+                        {
+                           Logger::Instance()->LogDebug("RecipientParser::CheckDeliveryPossibility::CheckAlias::RecipientUnknown");
+                           return DP_RecipientUnknown;
+                        }
+
+                        recipientAddress = onealiasaddress;
+
+                        if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility recipientAddress: " + recipientAddress));
+                     }
+
+
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility No recipients fail = ALL OK"));
+                  // if we made it thru all the aliases it means none were rejected so all OK
+                  bTreatSecurityAsLocal = true;
+
+                  return DP_Possible;
+
+                  }
+                  else
+                  {
+                     if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility Size <= 1"));
+                     recipientAddress = pAlias->GetValue();
+                     continue;
+                  }
                }
                else
                {
@@ -136,6 +195,8 @@ namespace HM
             shared_ptr<const DistributionList> pList = CacheContainer::Instance()->GetDistributionList(primaryAddress);
             if (pList)
             {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility is dist list"));
+
                if (!pList->GetActive())
                {
                   sErrMsg = "550 Distribution list is not active.";
@@ -206,6 +267,7 @@ namespace HM
             // whether the sender is allowed to send.
             return DP_Possible;
          }
+    if (IniFileSettings::Instance()->GetLogLevel() > 2) LOG_DEBUG(_T("RecipientParser::CheckDeliveryPossibility USER UNKNOWN: " + recipientAddress));
 
          sErrMsg = CONST_UNKNOWN_USER;
          return DP_RecipientUnknown;
@@ -290,7 +352,14 @@ namespace HM
             if (!pAlias->GetIsActive())
                return;
 
-            _CreateMessageRecipientList(pAlias->GetValue(), sOriginalAddress, lRecurse, pRecipients, recipientOK);
+            AnsiString sAliasList= pAlias->GetValue();
+
+            // Look for multi address separated by commas
+            vector<AnsiString> vAliasListAdresses = StringParser::SplitString(sAliasList,",");
+            boost_foreach(AnsiString onealiasaddress, vAliasListAdresses)
+            {
+               _CreateMessageRecipientList(onealiasaddress, sOriginalAddress, lRecurse, pRecipients, recipientOK);
+            }
 
             return;
          }  

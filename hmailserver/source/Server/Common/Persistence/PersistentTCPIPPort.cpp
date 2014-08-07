@@ -40,7 +40,27 @@ namespace HM
       pObject->SetID (pRS->GetLongValue("portid"));
       pObject->SetProtocol((SessionType) pRS->GetLongValue("portprotocol"));
       pObject->SetPortNumber(pRS->GetLongValue("portnumber"));
-      pObject->SetUseSSL(pRS->GetLongValue("portusessl") ? true : false);
+      //JDR: added to load set use STARTTLS.
+      long _portSSL = pRS->GetLongValue("portusessl");
+      if (_portSSL == 1)
+      {
+         // use regular SSL
+         pObject->SetUseSSL(true);
+         pObject->SetUseSTARTTLS(false); 
+      }
+      else if (_portSSL == 2)
+      {
+         // use starttls
+        pObject->SetUseSSL(false);
+        pObject->SetUseSTARTTLS(true); 
+      }
+      else
+      {
+         // all other options are invalid, set all to false.
+         pObject->SetUseSSL(false);
+         pObject->SetUseSTARTTLS(false); 
+      }
+     //JDR: end mod
       pObject->SetAddress(helper.Construct(pRS, "portaddress1", "portaddress2"));
       pObject->SetSSLCertificateID(pRS->GetLongValue("portsslcertificateid"));
       
@@ -84,8 +104,21 @@ namespace HM
       oStatement.AddColumn("portnumber", pObject->GetPortNumber());
       oStatement.AddColumnInt64("portsslcertificateid", pObject->GetSSLCertificateID());
       helper.AppendStatement(oStatement, pObject->GetAddress(), "portaddress1", "portaddress2");
-      oStatement.AddColumn("portusessl", pObject->GetUseSSL());
-      
+      //JDR: Added to store the the UseSTARTLS setting.
+      if (pObject->GetUseSSL() == true)
+      {
+         oStatement.AddColumn("portusessl", 1);
+      }
+      else if ( pObject->GetUseSTARTTLS() == true)
+      {
+         oStatement.AddColumn("portusessl", 2);
+      }
+      else
+      {
+         oStatement.AddColumn("portusessl", 0);
+      }
+     //JDR: end edit
+
       bool bNewObject = pObject->GetID() == 0;
 
       // Save and fetch ID

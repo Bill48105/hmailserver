@@ -85,7 +85,7 @@ namespace HM
    void
    SMTPClientConnection::InternalParseData(const AnsiString  &Request)
    {
-      LOG_DEBUG("SMTPClientConnection::_ParseASCII()");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::_ParseASCII()");
 
       String sData = "RECEIVED: " + Request;
       LOG_SMTP_CLIENT(GetSessionID(), GetIPAddress().ToString(), sData);
@@ -95,7 +95,7 @@ namespace HM
       String sMinus = "-";
       if ((Request.GetLength() > 3) && (Request.GetAt(3) == sMinus.GetAt(0)))
       {
-         LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 1");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 1");
          return;
       }
 
@@ -169,13 +169,13 @@ namespace HM
                _SetState(HELOSENT);
             }
         
-            LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 2");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99)LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 2");
 
             return ;
          }
          else
          {
-            LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 3");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 3");
             _UpdateAllRecipientsWithError(iCode, Request, false);
             _SendQUIT();
             return;
@@ -210,7 +210,7 @@ namespace HM
          String sData = "MAIL FROM:<" + sFrom + ">";
          _SendData(sData);
          m_CurrentState = MAILFROMSENT;
-         LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 4");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 4");
          return;
       }
 
@@ -223,7 +223,7 @@ namespace HM
          }
          else
          {
-            LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 5");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 5");
             _UpdateAllRecipientsWithError(iCode, Request, false);
          }
 
@@ -231,7 +231,7 @@ namespace HM
 
       if (m_CurrentState == RCPTTO)
       {
-         LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 6");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 6");
 
          shared_ptr<MessageRecipient> pRecipient = _GetNextRecipient();
          if (!pRecipient) 
@@ -286,7 +286,7 @@ namespace HM
       {
          _SendData("DATA");
          m_CurrentState = DATA;
-         LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 7");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 7");
          return;
       }
 
@@ -296,29 +296,29 @@ namespace HM
          {
             // Send the data!
             const String fileName = PersistentMessage::GetFileName(m_pDeliveryMessage);
-            LOG_DEBUG("SMTPClientConnection::~_BEFORE SendFile");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_BEFORE SendFile");
             _StartSendFile(fileName);
-            LOG_DEBUG("SMTPClientConnection::~_AFTER SendFile");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_AFTER SendFile");
             return;
          }
       }
 
       if (m_CurrentState == DATASENT)
       {
-            LOG_DEBUG("SMTPClientConnection::~_BEFORE SendQUIT");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_BEFORE SendQUIT");
          _SendQUIT();
-            LOG_DEBUG("SMTPClientConnection::~_AFTER SendQUIT");
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_AFTER SendQUIT");
 
          if (IsPositiveCompletion(iCode))
          {
             _UpdateSuccessfulRecipients();
-            LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 9");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 9");
             return;
          }
          else
          {
             _UpdateAllRecipientsWithError(iCode, Request, false);
-            LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 10");
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_ParseASCII() - 10");
          }
 
          return;
@@ -624,7 +624,9 @@ namespace HM
    void 
    SMTPClientConnection::_ReadAndSend()
    {
-            LOG_DEBUG("SMTPClientConnection::~_Continue sendfile");
+
+
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_Continue sendfile");
       // Continue sending the file..
       int bufferSize = GetBufferSize();
       shared_ptr<ByteBuffer> pBuffer = _currentFile.ReadChunk(bufferSize);
@@ -643,26 +645,26 @@ namespace HM
          pBuffer = _currentFile.ReadChunk(bufferSize);
       }
 
-       LOG_DEBUG("SMTPClientConnection::~_SendFile done close file");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_SendFile done close file");
       // We're done sending!
       _currentFile.Close();
 
       // No more data to send. Make sure all buffered data is flushed.
       _transmissionBuffer.Flush(true);
 
-      LOG_DEBUG("SMTPClientConnection::~_SendFile flushed buffer");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_SendFile flushed buffer");
 
       // We're ready to receive the Message accepted-response.
-      LOG_DEBUG("SMTPClientConnection::~_SendFile DATASENT set");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_SendFile DATASENT set");
 
       // No \r\n on end because SendData adds
       _SendData("\r\n.");
 
-      LOG_DEBUG("SMTPClientConnection::~_SendFile . sent");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_SendFile . sent");
 
       // State change moved to AFTER crlf.crlf to help with race condition
       m_CurrentState = DATASENT;
-      LOG_DEBUG("SMTPClientConnection::~_SendFile DATASENT set");
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("SMTPClientConnection::~_SendFile DATASENT set");
       return;
    }
 

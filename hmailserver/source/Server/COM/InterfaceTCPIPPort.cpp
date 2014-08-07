@@ -262,3 +262,36 @@ STDMETHODIMP InterfaceTCPIPPort::Delete()
    }
 }
 
+STDMETHODIMP InterfaceTCPIPPort::put_UseSTARTTLS(VARIANT_BOOL newVal)
+{
+   try
+   {
+      if (!m_pObject)
+         return GetAccessDenied();
+
+      m_pObject->SetUseSTARTTLS(newVal == VARIANT_TRUE);
+      return S_OK;
+   }
+   catch (...)
+   {
+      return COMError::GenerateGenericMessage();
+   }
+}
+
+STDMETHODIMP InterfaceTCPIPPort::get_UseSTARTTLS(VARIANT_BOOL *pVal)
+{
+   try
+   {
+      if (!m_pObject)
+         return GetAccessDenied();
+
+      *pVal = m_pObject->GetUseSTARTTLS() ? VARIANT_TRUE : VARIANT_FALSE ;
+   
+      return S_OK;
+   }
+   catch (...)
+   {
+      return COMError::GenerateGenericMessage();
+   }
+}
+

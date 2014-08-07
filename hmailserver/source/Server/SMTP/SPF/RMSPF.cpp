@@ -3728,6 +3728,8 @@ check_host(spfrec* spfp, const char* domain)
        {
 	if (prefix==SPF_Pass)
 	  result=prefix;
+// Temp hack to test blocking +all
+//	  result=SPF_Fail;
 	else if ((spfp->spf_level&0xFF)!=0) // executing an 'include'
 	  result=SPF_NoMatch;
 	else

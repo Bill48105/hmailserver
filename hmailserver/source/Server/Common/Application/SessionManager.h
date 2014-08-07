@@ -34,7 +34,8 @@ namespace HM
 
    private:
 
-      
+      // Test for reace condition causing IOCP crashes
+      CriticalSection m_oCritSec;
 
       long m_iNoOfSMTPConnections;
       long m_iNoOfPOP3Connections;

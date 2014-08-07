@@ -44,6 +44,7 @@ namespace HM
       std::set<SessionType> m_setSessionTypes;
       boost::asio::io_service _io_service;
       boost::asio::ssl::context _dummy_context;
+      bool m_bUseSTARTTLS;
       
    };
 

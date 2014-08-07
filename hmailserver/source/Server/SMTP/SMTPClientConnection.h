@@ -101,7 +101,8 @@ namespace HM
 
       String m_sUsername;
       String m_sPassword;
-
+      String m_sSTARTTLS;
+      
       unsigned int m_iCurRecipient;
 
       bool m_bSessionEnded;

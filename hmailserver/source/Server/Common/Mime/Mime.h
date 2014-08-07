@@ -186,6 +186,7 @@ namespace HM
       const char* GetRawFieldValue(const String &pszFieldName) const;
       
       String GetUnicodeFieldValue(const AnsiString &pszFieldName) const;
+      AnsiString GetUTF8FieldValue(const AnsiString &pszFieldName) const;
       
 
       bool SetParameter(const AnsiString &pszFieldName, const AnsiString & pszAttr, const AnsiString & pszValue);
@@ -249,6 +250,7 @@ namespace HM
 
    private:
       static String GetUnicodeFieldValue(const AnsiString &pszFieldName, const AnsiString &sRawFieldValue);
+      static AnsiString GetUTF8FieldValue(const AnsiString &pszFieldName, const AnsiString &sRawFieldValue);
 
 	   MimeHeader& operator=(const MimeHeader&);		// forbid operator =
    };

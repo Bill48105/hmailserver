@@ -64,9 +64,16 @@ namespace HM
       // - Don't allow < or > or " anywhere.
       //
 
-      String regularExpression = "[^<>\" ]+@[^<>\" ]+\\.[^<>\" ]+";
+      // Temp fix for moontear noreply@workflow hard coded invalid domain issue
+      // Less strict requires no suffix for localhost or noreply@workflow regularExpression = "[^<>\" ]+@[^<>\" ]+"
+      String sValidEmailPattern = IniFileSettings::Instance()->GetValidEmailPattern();
+      String regularExpression;
 
-      
+      // Override default pattern if one is defined
+      if (sValidEmailPattern.empty())
+          regularExpression = "[^<>\" ]+@[^<>\" ]+\\.[^<>\" ]+";
+      else
+          regularExpression = sValidEmailPattern;
 
       RegularExpression regexpEvaluator;
       bool result = regexpEvaluator.TestExactMatch(regularExpression, sEmailAddress);

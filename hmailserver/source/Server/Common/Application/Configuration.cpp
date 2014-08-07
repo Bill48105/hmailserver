@@ -652,14 +652,12 @@ namespace HM
          return false;
       ObjectCache::Instance()->GetGlobalRules()->Refresh();
 
-      // SSL certs must be restored before TCP/IP ports, since the
-      // TCP/IP ports refers to the SSL certs.
-      _sslCertificates->Refresh();
-      if (!_sslCertificates->XMLLoad(pBackupNode, iRestoreOptions))
-         return false;
-
       // TCP/IP ports
       if (!GetTCPIPPorts()->XMLLoad(pBackupNode, iRestoreOptions))
+         return false;
+
+      _sslCertificates->Refresh();
+      if (!_sslCertificates->XMLLoad(pBackupNode, iRestoreOptions))
          return false;
 
       _blockedAttachments->Refresh();

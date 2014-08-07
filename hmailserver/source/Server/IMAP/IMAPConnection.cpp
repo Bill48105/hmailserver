@@ -444,13 +444,13 @@ namespace HM
       if (Logger::Instance()->GetLogIMAP())
       {
          // Let's tame these logs a bit. Disables IMAP SENT
-         // logging unless debug logging enabled or LogLevel > 2
+         // logging unless debug logging enabled or LogLevel > 8
          // for lines with FETCH, STATUS or short )-only lines < 5
          String sDataTmp = sData;
          int iDataLenTmp = sDataTmp.GetLength();
          m_iLogLevel = IniFileSettings::Instance()->GetLogLevel();
 
-         if ((Logger::Instance()->GetLogDebug()) || (m_iLogLevel > 2) || (!(sDataTmp.Find(_T("FETCH")) > 0) && !(sDataTmp.Find(_T("STATUS")) > 0) && iDataLenTmp >= 5))
+         if ((Logger::Instance()->GetLogDebug()) || (m_iLogLevel > 8) || (!(sDataTmp.Find(_T("FETCH")) > 0) && !(sDataTmp.Find(_T("STATUS")) > 0) && iDataLenTmp >= 5))
          {
             String sLogData = _T("SENT: ") + sData;
             sLogData.TrimRight(_T("\r\n"));
@@ -665,7 +665,7 @@ namespace HM
 
       std::map<eIMAPCommandType, shared_ptr<IMAPCommand> >::iterator iterCommandHandler = mapCommandHandlers.find(IMAP_IDLE);
       shared_ptr<IMAPCommand> pCommand = (*iterCommandHandler).second;
-      shared_ptr<IMAPCommandIdle> pIdleCommand = boost::shared_static_cast<IMAPCommandIdle>(pCommand);
+      shared_ptr<IMAPCommandIdle> pIdleCommand = boost::static_pointer_cast<IMAPCommandIdle>(pCommand);
       pIdleCommand->Finish(true);
    }
 

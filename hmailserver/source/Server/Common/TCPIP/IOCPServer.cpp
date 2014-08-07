@@ -30,7 +30,7 @@ namespace HM
    IOCPServer::IOCPServer(void) :
       _dummy_context(_io_service, boost::asio::ssl::context::sslv23)
    {
-
+      m_bUseSTARTTLS = false;
    }
 
    IOCPServer::~IOCPServer(void)
@@ -74,10 +74,12 @@ namespace HM
          int iPort = pPort->GetPortNumber();
          SessionType st = pPort->GetProtocol();
          bool bUseSSL = pPort->GetUseSSL();
-
+         m_bUseSTARTTLS = pPort->GetUseSTARTTLS();
+          
+         
          shared_ptr<SSLCertificate> pSSLCertificate;
 
-         if (bUseSSL)
+         if (bUseSSL || m_bUseSTARTTLS)
          {
             shared_ptr<SSLCertificates> pSSLCertificates = Configuration::Instance()->GetSSLCertificates();
             pSSLCertificate = pSSLCertificates->GetItemByDBID(pPort->GetSSLCertificateID());
@@ -87,7 +89,7 @@ namespace HM
             continue;
 
          
-         shared_ptr<TCPServer> pTCPServer = shared_ptr<TCPServer> (new TCPServer(_io_service, address, iPort, st, pSSLCertificate));
+         shared_ptr<TCPServer> pTCPServer = shared_ptr<TCPServer> (new TCPServer(_io_service, address, iPort, st, pSSLCertificate,(m_bUseSTARTTLS == true)? 1 : 0));
 
          pTCPServer->Run();
 
@@ -134,7 +136,7 @@ namespace HM
    {
       TCPConnection::PrepareSSLContext(context);
       
-      shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(true, _io_service, context));
+      shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(true, _io_service, context, (m_bUseSTARTTLS == true)? 1 : 0 )); // 1 starttls on
 
       return pNewConnection;
    }
@@ -143,7 +145,7 @@ namespace HM
    shared_ptr<TCPConnection> 
    IOCPServer::CreateConnection()
    {
-      shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(false, _io_service, _dummy_context));
+      shared_ptr<TCPConnection> pNewConnection = shared_ptr<TCPConnection> (new TCPConnection(false, _io_service, _dummy_context, 0)); // 0 = starttls off for non-ssl socket
 
       return pNewConnection;
    }

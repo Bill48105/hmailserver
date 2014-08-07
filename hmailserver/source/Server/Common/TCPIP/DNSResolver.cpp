@@ -100,13 +100,60 @@ namespace HM
       PDNS_RECORD pDnsRecords = NULL;
       PIP4_ARRAY pSrvList = NULL;
 
+      AnsiString sCustomDNS;
+      sCustomDNS = IniFileSettings::Instance()->GetDnsServers();
+
+
+
       DWORD fOptions;
+
+if (sCustomDNS.IsEmpty())
+{
+      if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("DNSResolver::_Resolve() - Using DNS Servers: Windows System DNS");
+
+      // Use Windows DNS
       fOptions = DNS_QUERY_STANDARD;
+      pSrvList = NULL;
+}
+else
+{
+
+
+      if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("DNSResolver::_Resolve() - Using DNS Servers: " + sCustomDNS);
+
+     // Use Custom DNS
+
+     fOptions = DNS_QUERY_BYPASS_CACHE;
+
 
       // We need this if not using system dns servers
       //      fOptions = DNS_QUERY_BYPASS_CACHE;
+
+// Allocate memory for IP4_ARRAY structure.
+                        pSrvList = (PIP4_ARRAY) LocalAlloc(LPTR,sizeof(IP4_ARRAY));
+                        if(!pSrvList){
+         String sMessage;
+         sMessage.Format(_T("Unable to allocate memory for DNS server list. Query: %s, Type: %d."), sSearchFor, wType);
+         ErrorManager::Instance()->ReportError(ErrorManager::Low, 4401, "DNSResolver::_Resolve", sMessage);
+
+         return false;
+                        }
+//                        if(argv[++i]) {
+//                        strcpy(DnsServIp,argv[i]);
+                        pSrvList->AddrCount = 1;
+                        pSrvList->AddrArray[0] = inet_addr(sCustomDNS); //DNS server IP address
+//                        break; 
+//                        }
+
+
+
+}
+
+
+
       
-      DNS_STATUS nDnsStatus = DnsQuery(sSearchFor, wType, fOptions, NULL, &pDnsRecords,NULL);
+      DNS_STATUS nDnsStatus = DnsQuery(sSearchFor, wType, fOptions, pSrvList, &pDnsRecords,NULL);
+//      DNS_STATUS nDnsStatus = DnsQuery(sSearchFor, wType, fOptions, NULL, &pDnsRecords,NULL);
 
       PDNS_RECORD pDnsRecordsToDelete = pDnsRecords;
 

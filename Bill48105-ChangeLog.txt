@@ -1,0 +1,207 @@
+NOTE: All changes are noted including ones potentially already in the official code. Including all here
+
+2014-06-05 5.4-B2014060501
+* IMPORTANT: This build has a LOT of extra debug logging but NOT shown by default. [Settings]LogLevel=10 for some extra to 100 for extremely verbose
+* URGENT: Critical OpenSSL MitM vulnerability http://www.pcworld.com/article/2360560/new-openssl-vulnerability-puts-encrypted-communications-at-risk-of-spying.html
+* Upated hmailserver to openssl-1.0.1h
+* FIX: Added new 250 Help as always last EHLO response to fix 250-STARTTLS gmail issue (Last in list MUST be space not dash)
+
+2014-05-04 5.4-B2014050401
+* IMPORTANT: This build has a LOT of extra debug logging but NOT shown by default. [Settings]LogLevel=10 for some extra to 100 for extremely verbose
+* FIX: EHLO response now "250 AUTH" when DisableAUTHList is set since gmail refused to send if no AUTH in EHLO response
+
+2014-05-02 5.4-B2014050201
+* IMPORTANT: This build has a LOT of extra debug logging but NOT shown by default. [Settings]LogLevel=10 for some extra to 100 for extremely verbose
+* Added DisableAUTHList INI setting (See INI post below) - Appears to work
+* Fixed bug where built-in backup would abort if Data > 15GB despite BackupMessagesDBOnly=1 option. (Thx CU2U)
+* Using martin's openssl 1.0.1g from official source vs my assembly built one. (Might as well stick with his now that it is available)
+* Includes SSLOptionList & SSLCipherList INI settings (See INI post below) - Appear to work
+* DOES NOT include /LARGEADDRESSAWARE that was put in 1 test build
+
+2014-04-08 5.4-B2014040801
+* IMPORTANT: This build has a LOT of extra debug logging but NOT shown by default. [Settings]LogLevel=10 for some extra to 100 for extremely verbose
+* URGENT: Heartbleed zero day openSSL fix http://www.zdnet.com/heartbleed-serious-openssl-zero-day-vulnerability-revealed-7000028166/
+* Upated hmailserver to openssl-1.0.1g
+* ONLY MINIMALLY TESTED. VULNERABILITY ERADICATION UNTESTED. Just built openssl-1.01.1g & incorporated into this build.
+
+2014-02-08 5.4-B2014020801
+* IMPORTANT: This build has a LOT of extra debug logging but NOT shown by default. [Settings]LogLevel=10 for some extra to 100 for extremely verbose
+* FIX: Blank oMessage.body if MIME but no charset after UTF8 indexing patch
+* ADDED: Extra debug logging for adding attachments in scripts LogLevel >9
+
+2014-02-08 5.4-B2014020801
+* IMPORTANT: This build has a LOT of extra debug logging by default. Disable using [Settings]LogLevel=7 or lower
+* Added ability to set custom DNS servers in INI DnsServers=192.168.1.33
+* Only 1 DNS server for now! IPv6 compatibility UNKNOWN
+
+2014-02-07 5.4-B2014020701
+* IMPORTANT: This build has a LOT of extra debug logging by default. Disable using [Settings]LogLevel=7 or lower
+* SPECIAL TEST BUILD - Addresses generated file names in IMAP FETCH that are not RFC compliant
+* http://www.hmailserver.com/forum/viewtopic.php?f=7&t=25985
+* TESTED OK with a few email clients:
+* eM Client (filename has _ in place of ". 
+* Tbird shows attachment message inline & name as ForwardedMessage.eml.
+* Opera Mail shows no name but shows the message inline.
+
+2014-02-05 5.4-B2014020501
+* IMPORTANT: This build has a LOT of extra debug logging by default. Disable using [Settings]LogLevel=7 or lower
+* Adjusted Received headers so when AuthUserReplacementIP is set that HELO is localhost or Unknown
+* http://www.hmailserver.com/forum/viewtopic.php?p=157707#p157707
+
+2014-01-25 5.4-B2014012501
+* IMPORTANT: This build has a LOT of extra debug logging by default. Disable using [Settings]LogLevel=7 or lower
+* Added multi-forwards so now "Forward" on a user can be more than 1 address using commas. GUI has not been updated so for now setup like: [user]@[domain.dom,anotheruser@domain.dom] IOW just add the rest in the domain field for now
+* Added multi-aliases so now "Aliases" can be more than 1 address using commas. GUI was updated previous thanks to Rolaids0 so just enter like: [user@domain.dom,anotheruser@domain.dom]
+
+2014-01-15 TEST-15Jan14-ALPHA
+* IMPORTANT: This build has a LOT of extra debug logging by default. Disable using [Settings]LogLevel=7 or lower
+* STARTTLS SMTP incoming only.  Setup on Ports like SSL. Check Use STARTTLS (Thanks Rolaids0 for helping. Thanks to arvixe.com for making STARTTLS in hmailserver possible. Thanks to Percepts, markusr & others for helping test!) 
+* SPF default (if sender has no SPF) & override (to alter sender policy such as don't allow +all) policies using INI settings
+* OnSMTPData now has oClient.STARTTLS such as If (oClient.Port = "587"  And (oClient.Username = "" Or oClient.STARTTLS = "")) Then Result.Value=1 'Reject it  
+* ESMTPx headers to show if sender was AUTH'd or used STARTTLS such as ESMTPA ESMTPS or ESMTPSA for both
+* Negative DNS blacklists now possible allowing for DNS "whitelists" such as dnswl.org setup just like blacklist but set negative score to subtract (Thanks to Rolaids0 for helping)
+* Valid email address pattern ini allows over-ride of what hmail thinks is valid. Helpful for @localhost @fax or workflow@noreply for MS Sharepoint (no suffix)
+* Fix for UTF-8 indexing "DALConnection::Execute, Description: MySQL: Incorrect string value" errors (Thanks greylock!)
+* Protocol parser critical section added to stop IOCP crashes (Thanks greylock!)
+* Tcpconnection critical sections added to stop possible email corruption & IOCP crashes
+* SMTP delivery manager extra iocp error logging added
+* Auto responder "FROM" can now be set in ini so can set <> or noreply@yourdomain or mailer-daemon@ etc rather than hmail using recipient's address
+* Added extra auto responder logging
+* Added fired event logging so now can see which events were fired in logs (Thanks Rolaids0!)
+* Added messagesize debug logging
+* BE SURE TO SEE NEW INI's IN POST BELOW
+
+2013-10-07 5.4-B2013110801
+* Added greylock's patches to fix IOCPQueueWorkerTask crash/hang related errors. Thanks! (UNTESTED)
+* http://www.hmailserver.com/forum/viewtopic.php?f=10&t=25612
+
+2013-10-07 5.4-B2013110701
+* Added greylock's patches to fix Indexing "DALConnection::Execute" UTF8 related errors. Thanks! (UNTESTED)
+* http://www.hmailserver.com/forum/viewtopic.php?f=10&t=25578
+
+2013-05-23 5.4-B2013052301
+* Updated to B1949+ base
+* Mod'd hmail regex to allow domains without suffixes such as localhost or workflow@noreply for MS Sharepoint services
+
+2013-05-14 5.4-B2013051401
+* Fix for blank line added to headers by SA after update to protocol 1.2
+* Rewrite by martin on how destination is determined (consolidation of destination, route override relayer etc)
+
+2013-05-13 5.4-B2013051301
+*** DO NOT USE THIS BUILD IF YOU USE SA - Extra header is added by SA that can cause problems **
+* Upgraded to SA protocol 1.2 to allow size to be passed to/from SA for better confirming SA results (Thanks rolaids0/JamesDR for the patch!)
+* IMPORTANT NOTE: If SA is desired, SA 2.70 or later will be required going forward. Since that's from 2004 seems unlikely anyone is on THAT old of a build.
+* Disabled test logging for future multi-forwarding
+
+2013-04-05 5.4-B2013041501
+* Updated to B1947 base from SVN repo 
+* FIX: TEMP folder remnant files due to not being deleted after some SA scans. Thx Jens_Baae! viewtopic.php?f=7&t=24566
+* Includes logging for testing multi-forward. NOT COMPLETE, JUST LOGGING. Safe to ignore temporary "NOT REAL ERROR" lines in ERROR log.
+
+2013-04-08 5.4-B2013040801
+(Note: Includes unreleased post B1946 updates including IPV6 whitelist fixes plus previous non-special build experimental changes)
+* IMPORTANT: Fix AutoSubmitted forwarding issue introduced in B1944 & carried into B1946.  Issue 409
+* New logging for testing multi-forward. NOT COMPLETE, JUST LOGGING. Safe to ignore temporary "NOT REAL ERROR" lines in ERROR log.
+
+2013-03-18
+(Note: Includes unreleased post B1946 updates including IPV6 whitelist fixes plus previous non-special build experimental changes)
+* 1MB delayed email special build patch removed
+* Test changes including disabling statistics upload & add'l iEvent logging
+
+2013-03-06
+*** SPECIAL BUILD -DO NOT USE unless you want emails over 1MB delayed until after 9pm! ***
+* Updated to B1946+ base from SVN repo 
+(Note: Includes unreleased post B1946 updates including IPV6 whitelist fixes plus previous non-special build experimental changes)
+* Added "Are you sure?" confirmations to empty & delete public folder actions viewtopic.php?f=2&t=24344 (Untested)
+
+2013-01-25
+*** SPECIAL BUILD - DO NOT USE UNLESS NEEDED ***
+*** SPECIAL BUILD -DO NOT USE unless you want emails over 1MB delayed until after 9pm! ***
+* Mod'd hmail regex to allow domains without suffixes such as localhost or workflow@noreply for MS Sharepoint services
+* Block SPF +ALL special build patch removed
+
+2012-10-2
+*** SPECIAL BUILD - DO NOT USE UNLESS NEEDED ***
+*** SPECIAL BUILD -DO NOT USE unless you want emails over 1MB delayed until after 9pm! ***
+* Hard-coded hmail to reject all email from domain with SPF +all
+* Delay emails over 1MB until after 9PM
+
+2012-09-30
+*** SPECIAL BUILD -DO NOT USE unless you want emails over 1MB delayed until after 9pm! ***
+* Updated experimental base to B1942 from SVN repo
+* Includes martin's post B1942 changes to date
+
+2012-05-28
+* Fixed version shown in admin otherwise identical to B2012052701
+
+2012-05-27
+* Updated experimental base to B1942 from SVN repo
+
+2012-02-21
+* NEW: hMailServer.INI [Settings] BackupMessagesDBOnly=0 ;Defaults to 0 or disabled. When set to 1 backups & restores with 'messages' selected will backup ONLY database info for messages & NOT the actual Data folder. This can be useful to migrate between databases or if you backup files yourself. WARNING! Even with this enabled hmail still deletes domain folders & users during restore!!! Plus with this enabled you MUST backup your Data folder with some other method!!  This will be worked on later but common sense says you should always backup before restoring anyway so you've been warned. ;)
+* NEW: Logging to show if Messages are being backed up or restored based on the INI value.
+* FIX: File permissions of 7z backup could be admin-only or incorrect when backing up messages due to 7za temp folder usage. Now using hmail's temp folder instead of system temp.
+
+2012-02-16
+* NEW: INI option to forcibly drop a connection that exceeds a certain transfer size. WARNING! THIS IS AGAINST RFC but come on seriously, without this someone could send to you FOREVER hogging your connections & wasting bandwidth. So if you enable this just set it high enough that it won't be hit under normal circumstances but to catch craziness like the 1GB one that tried coming in here last week. This can also help stop wasted bandwidth from users running email client sending emails over & over with stuck super large messages in Outbox or at least limit how much they can send.
+* New INI setting: SMTPDMaxSizeDrop=100000 Defaults to 0 or disabled. Number of KB to allow before forcing a 552 drop for incoming email.
+* FIX: rolaids0 updates to how hmail formats headers to fix SA "RDNS_NONE Delivered to internal network by a host with no rDNS" issues & perhaps others.  Before: HELO ([ip]) After: HELO (PTR [ip]) Example Received: from bay0-omc2-s11.bay0.hotmail.com ([65.54.190.86]) becomes Received: from bay0-omc2-s11.bay0.hotmail.com (bay0-omc2-s11.bay0.hotmail.com [65.54.190.86]) (I realize it looks redundant but normally they SHOULD match but having both values allows SA to do tests properly.
+
+2011-12-01
+* NEW: Icons added to show disabled domains, accounts, aliases & dist lists in left tree to easily distinguish between enabled/disabled. (Appears to work)
+* TWEAK: Changed icon for distribution lists when enabled using group.ico now instead of arrowout.ico (Appears to work)
+* TWEAK: rolaids0 mods to make alias 1 input box vs 2 (UNTESTED)
+* NEW: Added popup dialog asking 'Also force an index now' when Refresh button pressed on Indexing tab ** FOR TESTING SO COULD BE REMOVED OR CHANGED ** (Appears to work)
+
+2011-11-19
+* Fix of admin GUI diags crash issue
+* New INI settings: LoadHeaderReadSize=4000 LoadBodyReadSize=4000 (max of 50,000 due to static buffer size). Defaults shown if not defined.
+* New INI: BlockedIPHoldSeconds=0 (default is 0 or disabled)
+* Few changes noted in SVN logs
+* Code cleanup & commit of most of the below changes
+
+2011-11-16
+* NEW: Added 3 new hmailserver.INI values to control the new indexing. [Settings] IndexerFullMinutes=720 IndexerFullLimit=25000 IndexerQuickLimit=1000 Defaults shown if not defined. (Appears to work but potential for issues. IMPORTANT: Limit values untested but should work)
+2011-11-15
+* TWEAK: rolaids0 updates to reduce load due to indexing queries. FULL (original) done at startup & every ~720min & new QUICK (last 1000 new messages) done every minute. (Appears to work but potential for issues. IMPORTANT: If more than 1000 messages are received in a minute some will not be indexed until next FULL)
+2011-11-04
+* NEW: Confirmation "Are you sure?" added before delete email from queue to avoid accidental removal & data loss (Appears to work)
+* NEW: Confirmation "Are you sure?" added before starting restore to avoid data loss as tables dropped & Data tree deleted (Appears to work)
+* NEW: Can now edit the mail.hmailserver.com hostname used for testing outgoing ports in diags (Appears to work)
+* NEW: SMTP connection banner now shown in diagnostic results (Appears to work)
+* TWEAK: Built-in backup now LOGS error notice for > 1.5G & FAIL aborts > 15G instead of failing @ 1.5G limit as prior (Untested)
+* NEW: Added error logging for restore if copying of temp folder fails (Untested)
+* TWEAK: Added -t7z -mmt -mx1 params to 7z compression during backups to reduce memory & CPU usage at lower compression (Appears to work)
+2011-11-03
+* NEW: Added oClient.HELO to OnAcceptMessage and OnSMTPData which contains SMTP HELO string (Appears to work)
+* NEW: Added TEMP logging to test & debug oClient.HELO (Appears to work)
+* NEW: Added TEMP logging to test & debug ETRN/HOLD queue remnants issue to SMTPDeliverer (Appears to work)
+2011-10-30
+* NEW:  Hold connection for 5 seconds for IP range deselection or > max connections due to multi-per-second pounding after autoban. Note: User setting to come if change kept (Appears to work - POTENTIAL FOR ISSUES)
+2011-10-28
+* FIX: Issue where ETRN/HOLD messages were incorrectly queued for delivery and possibly still shown in queue after delivery (Appears to work)
+* TWEAK: Additional logging for when error occurs from hmail trying to delete message that was already delivered that was false alarm due to ETRN/HOLD bug with no ill effect besides the erroneous logging.
+2011-10-27
+* TWEAK: Admin Status Start/Stop buttons now Pause/Resume to help minimize confusion (Appears to work - POTENTIAL FOR ISSUES)
+* TWEAK: Admin Status now has hint to use Windows to start/stop service (Appears to work - POTENTIAL FOR ISSUES)
+* TWEAK: Added script server exception to logging
+2011-10-26
+* FIX: Dupe messages being sent to some users if there was a fail on some users on same message due to message ID changing & hm_messagerecipients not being updated correctly.
+* TWEAK/FIX: Messages with no servers found were bounced immediately even if the reason was temp DNS failure. Now always treated as temp & queued for max tries instead. (Appears to work - POTENTIAL FOR ISSUES)
+* FIX: IMAP FETCH filename 'corruption' due to incorrect decoding of wrapped filenames that were not encoded. (Appears to work but POTENTIAL FOR ISSUES)
+* FIX: Apple Mail IMAP BODY PEEK attachment corruption. (Appears to work - POTENTIAL FOR ISSUES)
+* FIX: Quota + internal backup space being ignored for mssql ce users. (UNTESTED - POTENTIAL FOR ISSUES IN RELATED AREAS)
+* TWEAK: Message read buffer lowered from 10000 to 4000 to test performance difference. (UNTESTED - POTENTIAL FOR ISSUES IN RELATED AREAS)
+* TWEAK: Header read buffer lowered from 50000 to 4000 to test performance difference. (UNTESTED - POTENTIAL FOR ISSUES IN RELATED AREAS)
+2011-10-25 & earlier
+* TWEAK/FIX: MessageUndeliverable string from database now used to prepend Subject on bounces. (Risk of user having changed previously & wasn't used now is which could cause confusion)
+* FIX: Queue randomness Win2K crash work-around (rnd skipped if disabled/default)
+* FIX: Wrong MSSQL upgrade scripts. (UNTESTED - POTENTIAL FOR ISSUES IN RELATED AREAS)
+* TWEAK: Tweak to prioritize small & newer emails in queue delivery order. Assumption is that large emails will take longer to deliver tying up queue vs just getting rid of smaller emails 1st and messages with high # of tries are not likely to go anyway so why tie up newer emails in queue. (TEST WORKING AS EXPECTED)
+* NEW: Added %MACRO_ORIGINAL_HEADER% for ability to include original headers in undeliverable message (UNTESTED - POTENTIAL FOR ISSUES IN RELATED AREAS)
+* NEW: Added some LIST logging (should be changed to DEBUG only but needed something quick)
+* TWEAK: Adjusted 550 reject responses for LISTS to help sender understand why rejected (owner vs not list member). 
+* NEW: Comments-only for now regarding how plain text passwords in hmail are not case sensitive & perhaps that should be changed but worries about backward compatibility. (Not sure how long that has been that way or how many people rely on fact they are not case sensitive)
+* TWEAK: Fixes for SURBL lookup issues due to URL's not being recognized across line wraps (TESTED WORKING AS EXPECTED)
+* NEW: Comments added as reminder to consolidate URL's before lookups to eliminate dupes and allow user to define max URL's & time.
+

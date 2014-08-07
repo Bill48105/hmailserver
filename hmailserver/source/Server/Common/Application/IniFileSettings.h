@@ -108,6 +108,15 @@ namespace HM
       int GetSMTPDMaxSizeDrop () {return m_iSMTPDMaxSizeDrop; }
       bool GetBackupMessagesDBOnly () const { return m_bBackupMessagesDBOnly; }
       bool GetAddXAuthUserIP () const { return m_bAddXAuthUserIP; }
+      String GetValidEmailPattern() const { return m_sValidEmailPattern; }
+      String GetAutoReplyReturnPath() const { return m_sAutoReplyReturnPath; }
+      String GetSPFDefaultPolicy() const { return m_sSPFDefaultPolicy; }
+      String GetSPFDefaultPolicyA() const { return m_sSPFDefaultPolicyA; }
+      String GetSPFPolicyOverride() const { return m_sSPFPolicyOverride; }
+      String GetDnsServers() const { return m_sDnsServers; }
+      String GetSSLOptionList() const { return m_sSSLOptionList; }
+      String GetSSLCipherList() const { return m_sSSLCipherList; }
+      String GetDisableAUTHList() const { return m_sDisableAUTHList; }
 
       bool GetUseSSLVerifyPeer() {return _useSSLVerifyPeer;}
       
@@ -187,5 +196,15 @@ namespace HM
       int m_iSMTPDMaxSizeDrop;
       bool m_bBackupMessagesDBOnly;
       bool m_bAddXAuthUserIP;
+      String m_sValidEmailPattern;
+      String m_sAutoReplyReturnPath;
+      String m_sSPFDefaultPolicy;
+      String m_sSPFDefaultPolicyA;
+      String m_sSPFPolicyOverride;
+      String m_sDnsServers;
+      String m_sSSLOptionList;
+      String m_sSSLCipherList;
+      String m_sDisableAUTHList;
+
    };
 }

@@ -26,7 +26,8 @@ namespace HM
 
    TCPConnection::TCPConnection(bool useSSL,
                                 boost::asio::io_service& io_service, 
-                                boost::asio::ssl::context& context) :
+                                boost::asio::ssl::context& context,
+                                int stateSTARTTLS) :
       _useSSL(useSSL),
       _socket(io_service),
       _sslSocket(io_service, context),
@@ -35,9 +36,11 @@ namespace HM
       _receiveBinary(false),
       _remotePort(0),
       _hasTimeout(false),
-      _receiveBuffer(250000)
-   {
+      _receiveBuffer(250000),
+      _stateSTARTTLS(stateSTARTTLS)
 
+   {
+      _handshakeDone = false;
    }
 
    TCPConnection::~TCPConnection(void)
@@ -59,7 +62,15 @@ namespace HM
    TCPConnection::GetSocket()
    {
       if (_useSSL)
-         return _sslSocket.lowest_layer();
+if ((_stateSTARTTLS == 1) || (_stateSTARTTLS == 2))
+{
+
+if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("TCPCconnection::GetSocket(): next_layer()");
+			  return _sslSocket.next_layer();
+		  } else {
+if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("TCPCconnection::GetSocket(): lowest_layer()");
+			  return _sslSocket.lowest_layer();
+		  }
       else
          return _socket;
    }
@@ -244,6 +255,23 @@ namespace HM
 
          if (_useSSL)
          {
+
+// temp hack to try starttls
+if (_stateSTARTTLS > 0)
+{
+
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::~TCPConnection 4USESSL & TLS1");
+
+
+            // Send welcome message to client.
+            _protocolParser->OnConnected();
+
+}
+else
+{
+if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("TCPConnection::~TCPConnection 5USESSL & TLS!1");
+
+
             boost::asio::ssl::stream_base::handshake_type handshakeType = IsClient() ?
                boost::asio::ssl::stream_base::client :
                boost::asio::ssl::stream_base::server;
@@ -251,9 +279,12 @@ namespace HM
             _sslSocket.async_handshake(handshakeType,
                boost::bind(&TCPConnection::HandleHandshake, shared_from_this(),
                boost::asio::placeholders::error));
+}
+
          }
          else
          {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::~TCPConnection 6!USESSL & !TLS");
             // Send welcome message to client.
             _protocolParser->OnConnected();
          }
@@ -264,7 +295,7 @@ namespace HM
          throw;
       }
    }
-
+   
    void 
    TCPConnection::Start(shared_ptr<ProtocolParser> protocolParser)
    {
@@ -280,9 +311,24 @@ namespace HM
                if (GetSocket().is_open())
                {
 
+if ((_stateSTARTTLS == 1))
+{
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::~TCPConnection _stateSTARTTLS 1");
+
+               // Send welcome message to client.
+               _protocolParser->OnConnected();
+
+}
+else
+{
+
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::~TCPConnection _stateSTARTTLS 0/2/3");
+      
                   _sslSocket.async_handshake(boost::asio::ssl::stream_base::server,
                      boost::bind(&TCPConnection::HandleHandshake, shared_from_this(),
                      boost::asio::placeholders::error));
+}
+
                }
             }
             catch (boost::system::system_error error)
@@ -315,8 +361,22 @@ namespace HM
       {
          if (!error)
          {
+
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::HandleHandshake Completed");
+
+            bool _StartTLSEnabled = (_stateSTARTTLS == 2);
+            _handshakeDone = true;
+            _stateSTARTTLS=3;			 
+
             // Send welcome message to client.
-            _protocolParser->OnConnected();
+            if (_StartTLSEnabled)
+            {
+               _protocolParser->PostReceive(); 
+            }
+            else
+            {
+               _protocolParser->OnConnected();
+            }
          }
          else
          {
@@ -339,6 +399,9 @@ namespace HM
    void 
    TCPConnection::PostWrite(const AnsiString &sData)
    {
+      // Test fix for IOCP crashes
+      CriticalSectionScope scope (_criticalSection);
+      
       try
       {
          AnsiString sTemp = sData;
@@ -366,6 +429,10 @@ namespace HM
    void 
    TCPConnection::PostWrite(shared_ptr<ByteBuffer> pBuffer)
    {
+
+      // Test fix for IOCP crashes
+      CriticalSectionScope scope (_criticalSection);
+      
       try
       {
          shared_ptr<IOOperation> operation = shared_ptr<IOOperation>(new IOOperation(IOOperation::BCTSend, pBuffer));
@@ -383,6 +450,9 @@ namespace HM
    void
    TCPConnection::_ProcessOperationQueue()
    {
+
+	  if ((_stateSTARTTLS == 2) && (_handshakeDone == false)) return;
+
       int stage = 0;
 
       try
@@ -484,6 +554,8 @@ namespace HM
    void 
    TCPConnection::Write(shared_ptr<ByteBuffer> buffer)
    {
+      // Test fix for IOCP crashes
+      CriticalSectionScope scope (_criticalSection);
       try
       {
          int timeout = _protocolParser->GetTimeout();
@@ -496,11 +568,26 @@ namespace HM
          try
          {
             if (_useSSL)
-               boost::asio::async_write
-                  (_sslSocket, boost::asio::buffer(buffer->GetCharBuffer(), buffer->GetSize()), handleWriteFunction);
+            {
+               if ((_stateSTARTTLS == 1) || (_stateSTARTTLS == 2))
+               {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Write next_layer()");
+                  boost::asio::async_write
+                  (_sslSocket.next_layer(), boost::asio::buffer(buffer->GetCharBuffer(), buffer->GetSize()), handleWriteFunction);
+            }
             else
+            {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Write ssl");
+               boost::asio::async_write
+               (_sslSocket, boost::asio::buffer(buffer->GetCharBuffer(), buffer->GetSize()), handleWriteFunction);
+            }
+         }
+         else
+         {
+            if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Write non ssl");
                boost::asio::async_write
                   (_socket, boost::asio::buffer(buffer->GetCharBuffer(), buffer->GetSize()), handleWriteFunction);
+         }
 
             UpdateLogoutTimer();
          }
@@ -564,6 +651,10 @@ namespace HM
    void 
    TCPConnection::PostRead(const AnsiString &delimitor)
    {
+
+      // Test fix for IOCP crashes
+      CriticalSectionScope scope (_criticalSection);
+      
       try
       {
          shared_ptr<IOOperation> operation = shared_ptr<IOOperation>(new IOOperation(IOOperation::BCTReceive, delimitor));
@@ -581,6 +672,10 @@ namespace HM
    void 
    TCPConnection::Read(const AnsiString &delimitor)
    {
+
+      // Test fix for IOCP crashes
+      CriticalSectionScope scope (_criticalSection);
+
       try
       {
          function<void (const boost::system::error_code&, size_t)> handleReadFunction =
@@ -592,13 +687,30 @@ namespace HM
          {
             if (_useSSL)
             {
+               if ((_stateSTARTTLS == 1)||(_stateSTARTTLS == 2))
+               {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Read next_layer()");
+                  if (delimitor.GetLength() == 0)
+                     boost::asio::async_read(_sslSocket.next_layer(), _receiveBuffer, boost::asio::transfer_at_least(1), handleReadFunction);
+               else
+                  boost::asio::async_read_until(_sslSocket.next_layer(), _receiveBuffer,  delimitor, handleReadFunction);
+
+            }
+            else
+            {
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Read ssl");
                if (delimitor.GetLength() == 0)
                   boost::asio::async_read(_sslSocket, _receiveBuffer, boost::asio::transfer_at_least(1), handleReadFunction);
                else
                   boost::asio::async_read_until(_sslSocket, _receiveBuffer,  delimitor, handleReadFunction);
             }
+
+            }
             else
             {
+
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("TCPConnection::Read non ssl");
+
                if (delimitor.GetLength() == 0)
                   boost::asio::async_read(_socket, _receiveBuffer, boost::asio::transfer_at_least(1), handleReadFunction);
                else
@@ -812,6 +924,10 @@ namespace HM
    void 
    TCPConnection::HandleRead(const boost::system::error_code& error,  size_t bytes_transferred)
    {
+
+            // Test fix for IOCP crashes
+            CriticalSectionScope scope (_criticalSection);
+      
       try
       {
          // Remove the item we have just handled.
@@ -957,6 +1073,10 @@ namespace HM
    void 
    TCPConnection::HandleWrite(const boost::system::error_code& error,  size_t bytes_transferred)
    {
+
+            // Test fix for IOCP crashes
+            CriticalSectionScope scope (_criticalSection);
+
       try
       {
          // Remove the item we have just handled.
@@ -1078,8 +1198,64 @@ namespace HM
    TCPConnection::PrepareSSLContext(boost::asio::ssl::context &ctx)
    {
       boost::system::error_code errorCode;
-      ctx.set_options(boost::asio::ssl::context::default_workarounds |
-							 boost::asio::ssl::context::no_sslv2);
+
+
+      AnsiString sSSLCipherList;
+      sSSLCipherList = IniFileSettings::Instance()->GetSSLCipherList();
+
+      AnsiString sSSLOptionList;
+      sSSLOptionList = IniFileSettings::Instance()->GetSSLOptionList();
+
+
+      if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSLOptionList Option: " + sSSLOptionList));
+
+      if (sSSLCipherList != "") {
+         if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSLCipherList Option: " + sSSLCipherList));
+         SSL_CTX_set_cipher_list(ctx.native_handle(), sSSLCipherList);
+      } else if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSLCipherList Option not set, skipping."));
+
+
+
+      vector<AnsiString> vSSLOptions = StringParser::SplitString(sSSLOptionList,",");
+      boost_foreach(AnsiString oneSSLOption, vSSLOptions)
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - Found SSL Option: " + oneSSLOption));
+
+
+         if (oneSSLOption=="default_workarounds")
+         {
+            ctx.set_options(boost::asio::ssl::context::default_workarounds);
+            if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+         }
+         else if (oneSSLOption=="no_sslv2")
+         {
+            ctx.set_options(boost::asio::ssl::context::no_sslv2);
+            if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+         }
+         else if (oneSSLOption=="no_sslv3")
+         {
+            ctx.set_options(boost::asio::ssl::context::no_sslv3);
+            if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+         }
+         else if (oneSSLOption=="no_tlsv1")
+         {
+            ctx.set_options(boost::asio::ssl::context::no_tlsv1);
+            if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SSL Option SET: " + oneSSLOption));
+         }
+         else
+         {
+            if (IniFileSettings::Instance()->GetLogLevel() > 3) LOG_DEBUG(_T("TCPConnection::PrepareSSLContext - SKIPPING UNKNOWN SSL Option: " + oneSSLOption));
+         }
+
+         // Possible options
+         //SSL_OP_ALL
+         //SSL_OP_CIPHER_SERVER_PREFERENCE
+         //SSL_OP_NO_SSLv2
+         //SSL_OP_NO_SSLv3
+         //SSL_OP_NO_TLSv1
+         //SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION
+
+      }
 
       if (errorCode.value() != 0)
       {
@@ -1153,4 +1329,66 @@ namespace HM
          return 0;
       }
    }
+
+   bool
+   TCPConnection::STARTTLS_Handshake()
+   {
+      try
+      {
+
+         if (_handshakeDone) LOG_DEBUG("TCPConnection::STARTTLS_Handshake _handshakeDone TRUE") else LOG_DEBUG("TCPConnection::STARTTLS_Handshake _handshakeDone FALSE");
+
+         if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("TCPConnection::STARTTLS_Handshake handshake1");
+
+         _stateSTARTTLS = 2; // 2 means we are starting handshake but not complete yet
+
+         _sslSocket.async_handshake(boost::asio::ssl::stream_base::server,
+         boost::bind(&TCPConnection::HandleHandshake, shared_from_this(),
+         boost::asio::placeholders::error));
+
+         if (IniFileSettings::Instance()->GetLogLevel() > 9) LOG_DEBUG("TCPConnection::STARTTLS_Handshake handshake3");
+
+         return 1;
+      }
+
+            catch (boost::system::system_error error)
+            {
+               String sMessage;
+               sMessage.Format(_T("TCPConnection - STARTTLS_Handshake - Call to async_handshake failed. Error code: %d, Message: %s"), error.code().value(), String(error.what()));
+               LOG_TCPIP(sMessage);
+               return 0;
+
+            }
+
+   }
+
+
+   bool
+   TCPConnection::GetAllowSTARTTLS()
+   {
+      try
+      {
+         if ((_stateSTARTTLS == 1) && !(_handshakeDone)) return true; else return false;
+      }
+      catch (...)
+      {
+         return 0;
+      }
+   }
+
+
+   bool
+   TCPConnection::GetSTARTTLSDone()
+   {
+      try
+      {
+         return _handshakeDone;
+      }
+      catch (...)
+      {
+         return 0;
+      }
+   }
+
+
 }

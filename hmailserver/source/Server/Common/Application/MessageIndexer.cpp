@@ -81,7 +81,7 @@ namespace HM
             return nothing;
          }
 
-         shared_ptr<MessageIndexer> result = shared_static_cast<MessageIndexer>(task);
+         shared_ptr<MessageIndexer> result = static_pointer_cast<MessageIndexer>(task);
          return result;
       }
       catch (...)
@@ -193,10 +193,10 @@ namespace HM
             String dateString = header.GetUnicodeFieldValue("Date");
             DateTime date = Time::GetDateTimeFromMimeHeader(dateString);
 
-            String from = header.GetUnicodeFieldValue("From");
-            String subject = header.GetUnicodeFieldValue("Subject");
-            String cc = header.GetUnicodeFieldValue("CC");
-            String to = header.GetUnicodeFieldValue("TO");
+            String from = header.GetUTF8FieldValue("From");
+            String subject = header.GetUTF8FieldValue("Subject");
+            String cc = header.GetUTF8FieldValue("CC");
+            String to = header.GetUTF8FieldValue("TO");
 
             shared_ptr<MessageMetaData> metaData = shared_ptr<MessageMetaData>(new MessageMetaData);
 
@@ -212,7 +212,7 @@ namespace HM
 
             if (!persistentMetaData.SaveObject(metaData))
             {
-               LOG_DEBUG("Error saving the index.")
+               LOG_DEBUG("Error saving the index.");
                // Error saving. Abort now...
                return;
             }

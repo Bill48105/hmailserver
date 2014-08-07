@@ -111,6 +111,7 @@ namespace HM
    void
    SMTPConnection::OnConnected()
    {
+
       String sWelcome = Configuration::Instance()->GetSMTPConfiguration()->GetWelcomeMessage();
 
       String sData = "220 ";
@@ -121,7 +122,6 @@ namespace HM
          sData += sWelcome;
 
       _SendData(sData);
-
       PostReceive();
    }
 
@@ -139,6 +139,11 @@ namespace HM
       else if (sFirstWord == _T("HELP"))
          return SMTP_COMMAND_HELP;
       else if (sFirstWord == _T("QUIT"))
+         return SMTP_COMMAND_QUIT;
+// Temp hack due to oddity where sometimes QUIT is split @ Q
+      else if (sFirstWord == _T("Q"))
+         return SMTP_COMMAND_QUIT;
+      else if (sFirstWord == _T("UIT"))
          return SMTP_COMMAND_QUIT;
       else if (sFirstWord == _T("EHLO"))
          return SMTP_COMMAND_EHLO;
@@ -160,6 +165,8 @@ namespace HM
          return SMTP_COMMAND_NOOP;
       else if (sFirstWord == _T("ETRN"))
          return SMTP_COMMAND_ETRN;
+      else if (sFirstWord == _T("STARTTLS"))
+         return SMTP_COMMAND_STARTTLS;
 
       return SMTP_COMMAND_UNKNOWN;
    }
@@ -232,8 +239,8 @@ namespace HM
 
       if (sRequest.GetLength() > 510)
       {
-         // This line is to long... is this an evil user?
-         _SendData("500 Line to long.");
+         // This line is too long... is this an evil user?
+         _SendData("500 Line too long.");
          return;
       }
 
@@ -364,6 +371,32 @@ namespace HM
          
             return;
          }
+         else if (eCommandType == SMTP_COMMAND_STARTTLS)
+         {
+
+            if (GetAllowSTARTTLS()) {
+
+            _SendData("220 Handshake starting.");
+
+            if (StartTLS() == false)
+            {
+                    // log an error, propery
+                    _SendData("455 STARTTLS HANDSHAKE ERROR!");
+                    m_sSTARTTLS = "";  // Set STARTTLS to false to indicate handshake NOT completed OK
+            }
+            else
+            {
+               m_sSTARTTLS = "TRUE";  // Set STARTTLS to TRUE to indicate handshake completed OK
+            }
+            return;
+         }
+         else
+         {
+            _SendData("502 STARTTLS NOT ALLOWED.");
+            return;
+         }
+
+         }
          else if (eCommandType == SMTP_COMMAND_DATA)
          {
    
@@ -393,6 +426,8 @@ namespace HM
                pClientInfo->SetIPAddress(GetIPAddressString());
                pClientInfo->SetPort(GetLocalPort());
                pClientInfo->SetHELO(m_sHeloHost);
+
+               pClientInfo->SetSTARTTLS(m_sSTARTTLS);
 
                pContainer->AddObject("HMAILSERVER_MESSAGE", m_pCurrentMessage, ScriptObject::OTMessage);
                pContainer->AddObject("HMAILSERVER_CLIENT", pClientInfo, ScriptObject::OTClient);
@@ -944,6 +979,7 @@ namespace HM
          String sReceivedIP;
          String sAUTHIP;
          String sAuthSenderReplacementIP = IniFileSettings::Instance()->GetAuthUserReplacementIP();
+         String sTmpHeloHost;
          bool bAddXAuthUserIP = IniFileSettings::Instance()->GetAddXAuthUserIP();
          
 
@@ -952,14 +988,22 @@ namespace HM
          {
             sReceivedIP = sAuthSenderReplacementIP;
             sAUTHIP = GetIPAddressString();
+
+            if (sAuthSenderReplacementIP == _T("127.0.0.1"))
+               sTmpHeloHost = "localhost";
+            else
+               sTmpHeloHost = "Unknown";
          }
          else
          {
             sReceivedIP = GetIPAddressString();
             sAUTHIP = sReceivedIP;
+            sTmpHeloHost = m_sHeloHost;
+
          }
 
-         sReceivedLine.Format(_T("Received: %s\r\n"), Utilities::GenerateReceivedHeader(sReceivedIP, m_sHeloHost));
+
+         sReceivedLine.Format(_T("Received: %s\r\n"), Utilities::GenerateReceivedHeader(sReceivedIP, sTmpHeloHost, (!m_sUsername.IsEmpty()), GetSTARTTLSDone())); //false means no STARTTLS for now
          sOutput += sReceivedLine;
 
          String sComputerName = Utilities::ComputerName(); 
@@ -1571,19 +1615,55 @@ namespace HM
          String sSizeKeyword;
          int iMaxSize = m_SMTPConf->GetMaxMessageSize() * 1000;
          if (iMaxSize > 0)
-            sSizeKeyword.Format(_T("250-SIZE %d\r\n"), iMaxSize);
+            sSizeKeyword.Format(_T("250-SIZE %d"), iMaxSize);
          else
-            sSizeKeyword.Format(_T("250-SIZE\r\n"));
+            sSizeKeyword.Format(_T("250-SIZE"));
          sData += sSizeKeyword;
       }
 
-      String sAuth = "250 AUTH LOGIN";
+      if (GetAllowSTARTTLS()) sData += "\r\n250-STARTTLS";	   
 
+      String sAuth;
+      AnsiString sDisableAUTHList;
+      bool bAllowAUTH = true;
+
+      sDisableAUTHList = IniFileSettings::Instance()->GetDisableAUTHList();
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() - DisableAUTHList Option: " + sDisableAUTHList));
+
+      if (sDisableAUTHList != "") {
+
+      vector<AnsiString> vDisableAUTHOptions = StringParser::SplitString(sDisableAUTHList,",");
+      boost_foreach(AnsiString oneDisableAUTHOption, vDisableAUTHOptions)
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() -  Found DisableAUTH Option: " + oneDisableAUTHOption));
+
+         if (atoi(oneDisableAUTHOption) == GetLocalPort())
+         {
+             if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() -  DisableAUTH Port Matched"));
+
+             bAllowAUTH = false;
+             break;         
+         }
+      
+
+      }
+
+      
+      }
+
+      if (bAllowAUTH)
+      {
+
+      sAuth = "\r\n250-AUTH LOGIN";
+      
       if (m_SMTPConf->GetAuthAllowPlainText())
          sAuth += " PLAIN";
-
+      }
+      
       sData += sAuth;
-	   
+
+      // This serves a purpose. It ensures that the last one always has space rather than - per RFC
+      sData += "\r\n250 HELP";
       _SendData(sData);
    
       return true;
@@ -1685,13 +1765,44 @@ namespace HM
    void
    SMTPConnection::_ProtocolHELP()
    {
-      _SendData("211 DATA HELO EHLO MAIL NOOP QUIT RCPT RSET SAML TURN VRFY\r\n");
+      _SendData("211 DATA HELO EHLO MAIL NOOP QUIT RCPT RSET SAML TURN VRFY ETRN\r\n");
    }
 
    void 
    SMTPConnection::_ProtocolAUTH(const String &sRequest)
    {
       _requestedAuthenticationType = AUTH_NONE;
+
+
+      AnsiString sDisableAUTHList;
+      bool bAllowAUTH = true;
+
+      sDisableAUTHList = IniFileSettings::Instance()->GetDisableAUTHList();
+      if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() - DisableAUTHList Option: " + sDisableAUTHList));
+
+      if (sDisableAUTHList != "") {
+
+      vector<AnsiString> vDisableAUTHOptions = StringParser::SplitString(sDisableAUTHList,",");
+      boost_foreach(AnsiString oneDisableAUTHOption, vDisableAUTHOptions)
+      {
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() -  Found DisableAUTH Option: " + oneDisableAUTHOption));
+
+         if (atoi(oneDisableAUTHOption) == GetLocalPort())
+         {
+             if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(_T("SMTPConnection::_SendEHLOKeywords() -  DisableAUTH Port Matched"));
+
+             bAllowAUTH = false;
+             break;         
+         }
+      
+
+      }
+     }
+
+      if (!bAllowAUTH) {
+         _SendErrorResponse(504, "Authentication not allowed.");
+         return;
+      }
 
       std::vector<String> vecParams = StringParser::SplitString(sRequest,  " ");
 

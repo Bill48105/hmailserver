@@ -45,8 +45,12 @@ namespace HM
       
       
       if (!_CanSendVacationMessage(recipientAccount->GetAddress(), sToAddress))
-         return; // We have already notified this user.
-      
+        {
+
+          LOG_DEBUG("Skipping out-of-office message: Already sent to user previously");      
+          return; // We have already notified this user.
+        }
+
       LOG_DEBUG("Creating out-of-office message.");      
 
       String sModifiedSubject = sVacationSubject;
@@ -86,11 +90,24 @@ namespace HM
       }
 
 
+      String sAutoReplyReturnPath = IniFileSettings::Instance()->GetAutoReplyReturnPath();
+
       // Send a copy of this email.
       shared_ptr<Message> pMsg = shared_ptr<Message>(new Message());
 
       pMsg->SetState(Message::Delivering);
-      pMsg->SetFromAddress(recipientAccount->GetAddress());
+      // Override default autoreply FROM if one is defined
+      if (sAutoReplyReturnPath.empty())
+          pMsg->SetFromAddress(recipientAccount->GetAddress());
+      else
+      {
+          sAutoReplyReturnPath.Replace(_T("<"), _T(""));
+          sAutoReplyReturnPath.Replace(_T(">"), _T(""));
+          pMsg->SetFromAddress(sAutoReplyReturnPath);
+      }
+
+
+
 
       const String newFileName = PersistentMessage::GetFileName(pMsg);
 
@@ -98,7 +115,17 @@ namespace HM
       pNewMsgData->LoadFromMessage(newFileName, pMsg);
       
       // Required headers
-      pNewMsgData->SetReturnPath(recipientAccount->GetAddress());
+      // Override default autoreply FROM if one is defined
+      if (sAutoReplyReturnPath.empty())
+          pNewMsgData->SetReturnPath(recipientAccount->GetAddress());
+      else
+      {
+          sAutoReplyReturnPath.Replace(_T("<"), _T(""));
+          sAutoReplyReturnPath.Replace(_T(">"), _T(""));
+          pNewMsgData->SetReturnPath(sAutoReplyReturnPath);
+      }
+
+
       pNewMsgData->GenerateMessageID();
       pNewMsgData->SetSentTime(Time::GetCurrentMimeDate());
       pNewMsgData->SetFieldValue("Content-Type", "text/plain; charset=\"utf-8\"");
@@ -108,7 +135,7 @@ namespace HM
       pNewMsgData->SetTo(sToAddress);
       pNewMsgData->SetSubject(sModifiedSubject);
       pNewMsgData->SetBody(sModifiedBody);
-	  pNewMsgData->SetAutoReplied();
+      pNewMsgData->SetAutoReplied();
       pNewMsgData->IncreaseRuleLoopCount();
       
       // Write message data

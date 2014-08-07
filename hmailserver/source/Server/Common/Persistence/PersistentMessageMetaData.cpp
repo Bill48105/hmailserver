@@ -29,7 +29,6 @@ namespace HM
    set<shared_ptr<PersistentMessageMetaData::MessageInfo> >
    PersistentMessageMetaData::GetMessagesToIndex(bool quickIndex = false)
    {
-      PersistentMessage persistentMessage;
       set<shared_ptr<MessageInfo> > result;
 
       SQLStatement statement;
@@ -40,25 +39,19 @@ namespace HM
       statement.AddColumn("accountaddress");
       statement.SetStatementType(SQLStatement::STSelect);
       statement.SetTable("hm_messages");
-
-      // Are we doing a quick index? Quick means that we only index recent messages and ignore older ones.
-      if (quickIndex == true) 
-      {
+      // Are we doing a quick index? 
+      if (quickIndex == true) {
          // 1000 default
          int iIndexerQuickLimit = IniFileSettings::Instance()->GetIndexerQuickLimit();
-         int latestMessageId = persistentMessage.GetLatestMessageId();
-         int oldestMessageToIndex = latestMessageId - iIndexerQuickLimit;
-         if (oldestMessageToIndex < 0)
-            oldestMessageToIndex = 0;
 
-         // Only pick the last iIndexerQuickLimit records... very quick compared to full
+         // yes, only pick the last iIndexerQuickLimit records... very quick compared to full
          String whereClause;
-         whereClause.Format(_T("hm_messages.messagetype = 2 AND hm_messages.messageid > %d AND hm_message_metadata.metadata_id IS NULL"), oldestMessageToIndex);
+         whereClause.Format(_T("hm_messages.messagetype = 2 AND hm_messages.messageid > (select max(hm_messages.messageid) - %d from hm_messages) AND hm_message_metadata.metadata_id IS NULL"), iIndexerQuickLimit);
          statement.SetWhereClause(whereClause);
          statement.SetAdditionalSQL("LEFT JOIN hm_accounts ON hm_messages.messageaccountid = hm_accounts.accountid LEFT JOIN hm_message_metadata ON hm_messages.messageid = hm_message_metadata.metadata_messageid ");
-      } 
-      else 
-      {
+
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Doing QUICK index...");
+      } else {
          // 25000 default
          int iIndexerFullLimit = IniFileSettings::Instance()->GetIndexerFullLimit();
 
@@ -66,6 +59,7 @@ namespace HM
          statement.SetWhereClause("messagetype = 2 AND NOT EXISTS (SELECT metadata_messageid FROM hm_message_metadata WHERE hm_messages.messagetype = 2 and hm_messages.messageid = hm_message_metadata.metadata_messageid)");
          statement.SetAdditionalSQL("left join hm_accounts on hm_messages.messageaccountid = hm_accounts.accountid");
          statement.SetTopRows(iIndexerFullLimit);
+         if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Doing FULL index... ");
       }
 
       shared_ptr<DALRecordset> pRS = Application::Instance()->GetDBManager()->OpenRecordset(statement);

@@ -582,6 +582,8 @@ namespace HM
       oStatement.AddColumn("messageflags", pMessage->GetFlags());
       oStatement.AddColumnInt64("messagefolderid", pMessage->GetFolderID());
     
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(Formatter::Format(_T("messagesize:: {0}"), pMessage->GetSize()));
+
       LOG_DEBUG("Saving message: " + pMessage->GetPartialFileName());
 
       // We need to retrieve a new unique ID for this folder. Lock it.
@@ -643,7 +645,55 @@ namespace HM
          oStatement.AddColumn("messagelocked", bRecipientsExists ? 1 : 0);
          oStatement.AddColumn("messagecreatetime", sCreateTime);
          oStatement.AddColumn("messagecurnooftries", 0);
-         oStatement.AddColumn("messagenexttrytime",  "1901-01-01");
+
+
+// Below section was for special test build to delay large emails until after hours
+// Disabled with 0>1 for now but original code that's needed ENABLED with 1>0 don't remove!
+
+         bool bIsLocalRecipient = false;
+
+         //Disable large delivery delay & force now
+         if (1>0) // ALWAYS
+         {
+                  oStatement.AddColumn("messagenexttrytime",  "1901-01-01");
+         }
+         else // NEVER - DISABLED
+         {
+            std::vector<shared_ptr<MessageRecipient> >  &AllRecipients = pMessage->GetRecipients()->GetVector();
+            boost_foreach(shared_ptr<MessageRecipient> recipient, AllRecipients)
+            {
+               bIsLocalRecipient = recipient->GetIsLocalName();
+               if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG(Formatter::Format(_T("*** --> recipient, islocal: {0} {1}"), recipient->GetAddress(), bIsLocalRecipient));
+               if (bIsLocalRecipient) break;
+            }
+
+            // NEVER - Disabled large delivery delay
+            if ((0>1) || bIsLocalRecipient || pMessage->GetSize() < 4194304)
+            {
+            // All others queue for immediate delivery
+            oStatement.AddColumn("messagenexttrytime",  "1901-01-01");
+
+            SYSTEMTIME pTime;
+            GetLocalTime(&pTime);
+
+               if (pMessage->GetAccountID() == 0 && pTime.wHour > 7 && pTime.wHour < 19) 
+               {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Between 7AM & 7PM & large: We should delay message");
+                     oStatement.AddColumn("messagenexttrytime",  Time::GetCurrentDate() + " 19:00:00");
+               }
+               else
+               {
+                  if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("NOT Between 7AM & 7PM & large or msg id not 0: We should NOT delay message");
+                  // Big but off-peak hours or msg id not 0 so immediate delivery
+                  oStatement.AddColumn("messagenexttrytime",  "1901-01-01");
+               }
+
+            }
+
+         }
+
+// End large after hours test section
+
       }
       else
       {
@@ -895,20 +945,6 @@ namespace HM
          return false;
 
       int result = pRS->GetLongValue("c");
-
-      return result;
-   }
-
-   int
-   PersistentMessage::GetLatestMessageId()
-   {
-      SQLCommand command("select max(messageid) as m from hm_messages");
-
-      shared_ptr<DALRecordset> pRS = Application::Instance()->GetDBManager()->OpenRecordset(command);
-      if (!pRS)
-         return false;
-
-      int result = pRS->GetLongValue("m");
 
       return result;
    }

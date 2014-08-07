@@ -152,6 +152,8 @@ namespace HM
       int expungedCount = 0;
       while (iterMessage != vecObjects.end())
       {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Messages::Expunge lIndex++");
+
          lIndex++;
 
          shared_ptr<Message> pCurMsg = (*iterMessage);
@@ -159,6 +161,8 @@ namespace HM
          if ((messagesMarkedForDeletion && pCurMsg->GetFlagDeleted()) ||
              uids.find(pCurMsg->GetUID()) != uids.end())
          {
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Messages::Expunge Marked Flagged !end");
+
             PersistentMessage::DeleteObject(pCurMsg);
             vecExpungedMessages.push_back(lIndex);
             iterMessage = vecObjects.erase(iterMessage);
@@ -166,13 +170,21 @@ namespace HM
             expungedCount++;
          }
          else
+{
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Messages::Expunge iterMessage++");
             iterMessage++;
+}
 
          if (expungedCount > 1000)
          {
-            if (!func.empty())
-               func();
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Messages::Expunge expungedCount > 1000");
 
+            if (!func.empty())
+{
+if (IniFileSettings::Instance()->GetLogLevel() > 99) LOG_DEBUG("Messages::Expunge func()");
+
+               func();
+}
             expungedCount = 0;
          }
       }

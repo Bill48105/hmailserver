@@ -76,8 +76,6 @@ namespace HM
       static bool SaveFlags(shared_ptr<Message> message);
 
       static bool IsPartialPath(const String &path);
-      int GetLatestMessageId();
-
    private:
       
       static shared_ptr<Message> _CreateCopy(shared_ptr<Message> sourceMessage, int destinationAccountID);

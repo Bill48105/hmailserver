@@ -35,7 +35,9 @@ namespace HM
       SMTP_COMMAND_DATA = 1010,
       SMTP_COMMAND_RSET = 1011,
       SMTP_COMMAND_NOOP = 1012,
-      SMTP_COMMAND_ETRN = 1013
+      SMTP_COMMAND_ETRN = 1013,
+      SMTP_COMMAND_STARTTLS = 1014
+
    };
 
    class SMTPConnection : public ProtocolParser, 
@@ -177,6 +179,7 @@ namespace HM
 
       String m_sUsername;
       String m_sPassword;
+      String m_sSTARTTLS;
 
       shared_ptr<SMTPConfiguration> m_SMTPConf;
    

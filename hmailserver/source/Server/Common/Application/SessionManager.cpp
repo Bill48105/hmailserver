@@ -57,6 +57,8 @@ namespace HM
    shared_ptr<ProtocolParser>
    SessionManager::CreateConnection(SessionType t, shared_ptr<SecurityRange> securityRange)
    {
+      // Test for reace condition causing IOCP crashes
+      CriticalSectionScope scope(m_oCritSec);
       shared_ptr<ProtocolParser> pParser;
 
       // Check max per protocol

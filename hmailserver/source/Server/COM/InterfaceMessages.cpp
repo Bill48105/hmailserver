@@ -170,6 +170,8 @@ STDMETHODIMP InterfaceMessages::DeleteByDBID(hyper lDBID)
       __int64 iFolderID = m_pMessages->GetFolderID();
       if (iFolderID == -1)
       {
+
+
          // We're not browsing the message cache.
          __int64 iAccountID = m_pMessages->GetAccountID();
    
@@ -183,6 +185,24 @@ STDMETHODIMP InterfaceMessages::DeleteByDBID(hyper lDBID)
    
          HM::Application::Instance()->GetNotificationServer()->SendNotification(notification);
       }
+else
+{
+
+         // We're not browsing the message cache.
+         __int64 iAccountID = m_pMessages->GetAccountID();
+   
+   
+         std::vector<__int64> affectedMessages;
+         affectedMessages.push_back(lDBID);
+   
+         // Notify clients that the message has been dropped.
+         shared_ptr<HM::ChangeNotification> notification = 
+            shared_ptr<HM::ChangeNotification>(new HM::ChangeNotification(m_pMessages->GetAccountID(), m_pMessages->GetFolderID(), HM::ChangeNotification::NotificationMessageDeleted, affectedMessages));
+   
+         HM::Application::Instance()->GetNotificationServer()->SendNotification(notification);
+
+
+}
    
       return S_OK;
    }

@@ -24,11 +24,15 @@ namespace HM
       void SetHELO(const String &HELO) { m_sHELO = HELO; }
       String GetHELO() const { return m_sHELO; }
 
+      void SetSTARTTLS(const String &sSTARTTLS) { m_sSTARTTLS = sSTARTTLS; }
+      String GetSTARTTLS() const { return m_sSTARTTLS; }
+
    private:
 
       String IPAddress;
       long m_lPort;
       String m_sUsername;
       String m_sHELO;
+      String m_sSTARTTLS;
    };
 }

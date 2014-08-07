@@ -69,6 +69,11 @@ namespace HM
             BLCheck::ClientExistsInDNSBL(addr, pDNSBL->GetDNSHost(), pDNSBL->GetExpectedResult()))
          {
             int iSomeScore = pDNSBL->GetScore();
+
+            String message;
+            message.Format(_T("DNS Blacklist Score %d"), iSomeScore);
+            LOG_DEBUG(message);
+
             shared_ptr<SpamTestResult> pResult = shared_ptr<SpamTestResult>(new SpamTestResult(GetName(), SpamTestResult::Fail, iSomeScore, pDNSBL->GetRejectMessage()));
             
             setSpamTestResults.insert(pResult);
